@@ -2,11 +2,11 @@
 
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { LogoET } from '@/components/ui/LogoET'
 import { useAuth } from '@/contexts/AuthContext'
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter()
   const search = useSearchParams()
   const { isAuthenticated, isLoading, signInWithGoogle, signInWithPassword } = useAuth()
@@ -201,5 +201,20 @@ export default function LoginPage() {
         </div>
       </main>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen grid place-items-center bg-white text-slate-900">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-[hsl(var(--primary))] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-slate-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   )
 }
