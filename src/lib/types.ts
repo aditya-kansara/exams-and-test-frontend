@@ -64,7 +64,7 @@ export const AnswerSubmitResponseSchema = z.object({
   theta: z.number(),
   se: z.number(),
   stop: z.boolean(),
-  item: ItemPublicSchema.optional(),
+  item: ItemPublicSchema.nullable().optional(),
 })
 
 export type AnswerSubmitRequest = z.infer<typeof AnswerSubmitRequestSchema>
@@ -76,12 +76,10 @@ export const FinishRequestSchema = z.object({
 })
 
 export const FinishResponseSchema = z.object({
-  exam_attempt_id: z.number(),
-  final_theta: z.number(),
-  final_se: z.number(),
-  total_items: z.number(),
-  items_scored: z.number(),
-  report: z.any().nullable(),
+  raw_score: z.number(),
+  completed_at: z.string(),
+  theta_hat: z.number().nullable(),
+  se_theta: z.number().nullable(),
 })
 
 // Results Types - Updated to match ExamReportRes
@@ -111,17 +109,7 @@ export const ApiErrorSchema = z.object({
 
 export type ApiError = z.infer<typeof ApiErrorSchema>
 
-// Auth Types
-export const MagicLinkVerifyResponseSchema = z.object({
-  access_token: z.string(),
-  token_type: z.string(),
-  expires_in: z.number(),
-  user_id: z.string(),
-  email: z.string(),
-  is_new_user: z.boolean(),
-})
-
-export type MagicLinkVerifyResponse = z.infer<typeof MagicLinkVerifyResponseSchema>
+// Auth Types - Magic link authentication removed
 
 // UI State Types
 export interface ExamState {

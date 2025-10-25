@@ -2,7 +2,8 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { ExamStartResponse, AnswerSubmitRequest, EXAM_DURATION_SECONDS } from '@/lib/types'
+import { ExamStartResponse, AnswerSubmitRequest } from '@/lib/types'
+import { EXAM_CONFIG } from '@/config/exam'
 import { apiClient, handleApiError } from '@/lib/api'
 // WebSocket removed - not needed for current backend implementation
 import { useExamStore } from '@/lib/store/exam'
@@ -47,7 +48,7 @@ export function ExamClient({ attemptId, initialData }: ExamClientProps) {
     setCurrentItem(initialData.item)
     setPosition(initialData.position)
         // Set timer to configured exam duration
-        setTimer(EXAM_DURATION_SECONDS)
+        setTimer(EXAM_CONFIG.DURATION_SECONDS)
     startTimer()
   }, [attemptId, initialData, setAttemptId, setCurrentItem, setPosition, setTimer, startTimer])
 
@@ -95,23 +96,65 @@ export function ExamClient({ attemptId, initialData }: ExamClientProps) {
 
       const result = await apiClient.submitAnswer(answerRequest)
       
+      
       // Add response to store
       addResponse(answerRequest)
 
       // Check if exam should stop
       if (result.stop) {
-        // Finish the exam
-        const finishResult = await apiClient.finishExam({
-          exam_attempt_id: parseInt(attemptId)
-        })
-        
-        setComplete(true)
-        stopTimer()
-        router.push(`/results/${attemptId}`)
+        try {
+          // Finish the exam
+          const finishResult = await apiClient.finishExam({
+            exam_attempt_id: parseInt(attemptId)
+          })
+          
+          setComplete(true)
+          stopTimer()
+          
+          // Redirect to simpleResults with finish data
+          const finishData = {
+            score: finishResult.theta_hat, // Using theta_hat as the score
+            theta: finishResult.theta_hat,
+            se: finishResult.se_theta,
+            completed: finishResult.completed_at // Use the actual completion time from backend
+          }
+          
+          const queryParams = new URLSearchParams(finishData).toString()
+          router.push(`/results/${attemptId}/simple?${queryParams}`)
+        } catch (finishError) {
+          console.error('Error calling finish API:', finishError)
+          setError('Failed to finish exam. Please try again.')
+        }
       } else if (result.item) {
         // Update with next item
         setCurrentItem(result.item)
         setPosition(result.position)
+      } else {
+        // No more items and we've reached the total questions
+        // This handles the case where item is null and we've completed all questions
+        const currentQuestionNumber = responses.length + 1
+        const totalQuestions = EXAM_CONFIG.TOTAL_QUESTIONS
+        
+        if (currentQuestionNumber >= totalQuestions) {
+          // Finish the exam
+          const finishResult = await apiClient.finishExam({
+            exam_attempt_id: parseInt(attemptId)
+          })
+          
+          setComplete(true)
+          stopTimer()
+          
+          // Redirect to simpleResults with finish data
+          const finishData = {
+            score: finishResult.theta_hat, // Using theta_hat as the score
+            theta: finishResult.theta_hat,
+            se: finishResult.se_theta,
+            completed: finishResult.completed_at // Use the actual completion time from backend
+          }
+          
+          const queryParams = new URLSearchParams(finishData).toString()
+          router.push(`/results/${attemptId}/simple?${queryParams}`)
+        }
       }
     } catch (err) {
       setError(handleApiError(err))
@@ -144,9 +187,9 @@ export function ExamClient({ attemptId, initialData }: ExamClientProps) {
     <div className="min-h-screen bg-gray-50 relative">
       {/* Timer - Sticky position in top-right */}
       <div className="sticky top-4 z-40 flex justify-end">
-        <ExamHeaderTimer 
+          <ExamHeaderTimer 
           timeRemaining={timer.timeRemaining} 
-          totalSeconds={EXAM_DURATION_SECONDS}
+          totalSeconds={EXAM_CONFIG.DURATION_SECONDS}
         />
       </div>
 
@@ -168,7 +211,7 @@ export function ExamClient({ attemptId, initialData }: ExamClientProps) {
             onSubmit={handleAnswerSubmit}
             isLoading={isSubmitting}
             questionNumber={responses.length + 1}
-            isLastQuestion={responses.length >= 24} // Consider last 5 questions as potential last
+            isLastQuestion={responses.length >= EXAM_CONFIG.TOTAL_QUESTIONS - 1} // Consider last question as potential last
           />
         )}
       </div>
