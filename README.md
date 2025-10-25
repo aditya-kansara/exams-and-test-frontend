@@ -174,3 +174,4 @@ For support and questions:
 - **Next.js** team for the amazing framework
 - **Tailwind CSS** for the utility-first CSS framework
 - **Lucide** for beautiful icons
+

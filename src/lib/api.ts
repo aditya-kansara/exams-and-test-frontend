@@ -18,6 +18,8 @@ import {
   ExamResultsSchema,
   ApiError,
   ApiErrorSchema,
+  MagicLinkVerifyResponse,
+  MagicLinkVerifyResponseSchema,
 } from './types'
 
 class ApiClient {
@@ -113,8 +115,14 @@ class ApiClient {
     return ExamStateResponseSchema.parse(response.data)
   }
 
-  // Note: Magic link authentication is handled by Supabase directly
-  // These methods are kept for admin/backend functionality if needed
+  // Magic link authentication
+  async verifyMagicLink(token: string, type: string = 'magiclink'): Promise<MagicLinkVerifyResponse> {
+    const response = await this.client.post('/auth/verify-magic-link', {
+      token,
+      type,
+    })
+    return MagicLinkVerifyResponseSchema.parse(response.data)
+  }
 
   // Note: Google OAuth is now handled by Supabase directly via supabase.auth.signInWithOAuth()
   // These backend endpoints are kept for server-side OAuth flows if needed
@@ -153,4 +161,4 @@ export const isNetworkError = (error: unknown): boolean => {
 }
 
 // Export types for convenience
-export type { ExamStartRequest, ExamStartResponse, AnswerSubmitRequest, AnswerSubmitResponse, ExamResults }
+export type { ExamStartRequest, ExamStartResponse, AnswerSubmitRequest, AnswerSubmitResponse, ExamResults, MagicLinkVerifyResponse }

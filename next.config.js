@@ -2,11 +2,11 @@
 const nextConfig = {
   images: {
     domains: ['localhost'],
+    // Add your production domains here when deploying
+    // domains: ['localhost', 'your-production-domain.com'],
   },
-  env: {
-    STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
-    STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
-  },
+  // Don't expose server-only secrets to the client
+  // Use API routes for server-side Stripe operations
 }
 
 module.exports = nextConfig

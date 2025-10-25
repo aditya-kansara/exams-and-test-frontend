@@ -29,7 +29,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { data: { session }, error } = await supabase.auth.getSession()
         
         if (error) {
-          console.error('Error getting initial session:', error)
+          if (process.env.NODE_ENV === 'development') {
+            console.error('Error getting initial session:', error)
+          }
         } else {
           setSession(session)
           setUser(session?.user ?? null)
@@ -42,7 +44,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         }
       } catch (error) {
-        console.error('Error in getInitialSession:', error)
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Error in getInitialSession:', error)
+        }
       } finally {
         setIsLoading(false)
       }
@@ -53,7 +57,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email)
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Auth state changed:', event, session?.user?.email)
+        }
         setSession(session)
         setUser(session?.user ?? null)
         
@@ -83,7 +89,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Clear API client token
       apiClient.clearToken()
     } catch (error) {
-      console.error('Error signing out:', error)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error signing out:', error)
+      }
     }
   }
 
@@ -103,7 +111,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Return null for now - the actual result will be handled in the callback
       return null
     } catch (error) {
-      console.error('Error signing in with Google:', error)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error signing in with Google:', error)
+      }
       throw error
     }
   }
@@ -121,7 +131,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       // The auth state change will be handled by the onAuthStateChange listener
     } catch (error) {
-      console.error('Error signing in with password:', error)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error signing in with password:', error)
+      }
       throw error
     }
   }

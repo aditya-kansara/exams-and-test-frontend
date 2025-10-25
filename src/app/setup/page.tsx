@@ -17,7 +17,8 @@ export default function SetupPage() {
     setSeedResult(null)
 
     try {
-      const response = await fetch('http://localhost:8000/api/v1/exam/seed/items', {
+      const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000'
+      const response = await fetch(`${apiBase}/api/v1/exam/seed/items`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -43,7 +44,9 @@ export default function SetupPage() {
       // For now, we'll just show instructions
       alert('Test user creation not implemented yet. Use the registration form with test@example.com')
     } catch (err) {
-      console.error('Failed to create test user:', err)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Failed to create test user:', err)
+      }
     }
   }
 
@@ -174,7 +177,7 @@ export default function SetupPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <span className="text-sm text-gray-600">Backend Connection:</span>
-                <Badge variant="outline">http://localhost:8000</Badge>
+                <Badge variant="outline">{process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000'}</Badge>
               </div>
               <Button variant="outline" size="sm">
                 Test Connection
@@ -193,7 +196,7 @@ export default function SetupPage() {
               <div>
                 <h4 className="font-medium mb-2">1. Start Backend Server</h4>
                 <p className="text-gray-600">
-                  Make sure your FastAPI backend is running on http://localhost:8000
+                  Make sure your FastAPI backend is running on {process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000'}
                 </p>
               </div>
               <div>

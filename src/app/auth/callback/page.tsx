@@ -24,19 +24,25 @@ function AuthCallbackContent() {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
-        console.log('Handling OAuth callback...')
-        console.log('URL:', window.location.href)
-        console.log('Hash:', window.location.hash)
-        console.log('Search params:', window.location.search)
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Handling OAuth callback...')
+          console.log('URL:', window.location.href)
+          console.log('Hash:', window.location.hash)
+          console.log('Search params:', window.location.search)
+        }
         
         // Handle the OAuth callback with Supabase
         const { data, error } = await supabase.auth.getSession()
         
-        console.log('Session data:', data)
-        console.log('Session error:', error)
+        if (process.env.NODE_ENV === 'development') {
+          console.log('Session data:', data)
+          console.log('Session error:', error)
+        }
         
         if (error) {
-          console.error('Session error:', error)
+          if (process.env.NODE_ENV === 'development') {
+            console.error('Session error:', error)
+          }
           setStatus('error')
           setMessage('Authentication failed')
           setError(error.message)
@@ -44,7 +50,9 @@ function AuthCallbackContent() {
         }
 
         if (!data.session) {
-          console.log('No active session found')
+          if (process.env.NODE_ENV === 'development') {
+            console.log('No active session found')
+          }
           setStatus('error')
           setMessage('No active session found')
           setError('Please try signing in again')

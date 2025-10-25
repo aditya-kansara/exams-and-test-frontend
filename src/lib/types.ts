@@ -111,6 +111,18 @@ export const ApiErrorSchema = z.object({
 
 export type ApiError = z.infer<typeof ApiErrorSchema>
 
+// Auth Types
+export const MagicLinkVerifyResponseSchema = z.object({
+  access_token: z.string(),
+  token_type: z.string(),
+  expires_in: z.number(),
+  user_id: z.string(),
+  email: z.string(),
+  is_new_user: z.boolean(),
+})
+
+export type MagicLinkVerifyResponse = z.infer<typeof MagicLinkVerifyResponseSchema>
+
 // UI State Types
 export interface ExamState {
   attemptId: number | null
