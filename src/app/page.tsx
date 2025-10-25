@@ -222,7 +222,7 @@ export default function ExamsAndTestLanding() {
             {/* image second on desktop; centered on mobile */}
             <div className="flex justify-center">
               <Image
-                src="/AMC.jpg"
+                src="/1_DH1010_lores_070303_000244.jpg.jpeg"
                 alt="AMC Exam Interface"
                 width={600}
                 height={450}
