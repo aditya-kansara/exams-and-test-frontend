@@ -115,7 +115,7 @@ class ApiClient {
     return ExamStateResponseSchema.parse(response.data)
   }
 
-  // Magic link authentication
+  // Magic link authentication - Vercel cache fix
   async verifyMagicLink(token: string, type: string = 'magiclink'): Promise<MagicLinkVerifyResponse> {
     const response = await this.client.post('/auth/verify-magic-link', {
       token,
