@@ -113,9 +113,9 @@ export function ExamClient({ attemptId, initialData }: ExamClientProps) {
           
           // Redirect to simpleResults with finish data
           const finishData = {
-            score: finishResult.theta_hat, // Using theta_hat as the score
-            theta: finishResult.theta_hat,
-            se: finishResult.se_theta,
+            score: finishResult.theta_hat?.toString() || '0', // Using theta_hat as the score
+            theta: finishResult.theta_hat?.toString() || '0',
+            se: finishResult.se_theta?.toString() || '1',
             completed: finishResult.completed_at // Use the actual completion time from backend
           }
           
@@ -146,9 +146,9 @@ export function ExamClient({ attemptId, initialData }: ExamClientProps) {
           
           // Redirect to simpleResults with finish data
           const finishData = {
-            score: finishResult.theta_hat, // Using theta_hat as the score
-            theta: finishResult.theta_hat,
-            se: finishResult.se_theta,
+            score: finishResult.theta_hat?.toString() || '0', // Using theta_hat as the score
+            theta: finishResult.theta_hat?.toString() || '0',
+            se: finishResult.se_theta?.toString() || '1',
             completed: finishResult.completed_at // Use the actual completion time from backend
           }
           
