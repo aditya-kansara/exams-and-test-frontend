@@ -67,7 +67,7 @@ export default function SetupPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
-                <Database className="h-6 w-6 text-blue-600" />
+                <Database className="h-6 w-6 text-[#1c90a6]" />
                 <span>Database Setup</span>
               </CardTitle>
               <CardDescription>
@@ -106,11 +106,11 @@ export default function SetupPage() {
 
               {seedResult && (
                 <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                  <div className="flex items-center space-x-2 text-green-700">
+                  <div className="flex items-center space-x-2 text-[#1c90a6]">
                     <CheckCircle className="h-4 w-4" />
                     <span className="text-sm font-medium">Success</span>
                   </div>
-                  <p className="text-green-600 text-sm mt-1">{seedResult}</p>
+                  <p className="text-[#1c90a6] text-sm mt-1">{seedResult}</p>
                 </div>
               )}
 
@@ -130,7 +130,7 @@ export default function SetupPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
-                <UserPlus className="h-6 w-6 text-green-600" />
+                <UserPlus className="h-6 w-6 text-[#1c90a6]" />
                 <span>Test User</span>
               </CardTitle>
               <CardDescription>

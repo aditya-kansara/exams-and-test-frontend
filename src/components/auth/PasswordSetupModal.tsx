@@ -102,7 +102,7 @@ export function PasswordSetupModal({ isOpen, userEmail, userName, onSuccess }: P
     if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) strength++
 
     const labels = ['Very Weak', 'Weak', 'Fair', 'Good', 'Strong']
-    const colors = ['bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-blue-500', 'bg-green-500']
+    const colors = ['bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-blue-500', 'bg-[#1c90a6]']
     
     return {
       strength: (strength / 5) * 100,
@@ -125,12 +125,12 @@ export function PasswordSetupModal({ isOpen, userEmail, userName, onSuccess }: P
           </DialogDescription>
         </DialogHeader>
 
-        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <div className="flex items-center space-x-2 text-blue-700">
+        <div className="mb-4 p-3 bg-[#1c90a6]/10 border border-[#1c90a6]/20 rounded-lg">
+          <div className="flex items-center space-x-2 text-[#1c90a6]">
             <CheckCircle className="h-4 w-4" />
             <span className="text-sm font-medium">Google Account Connected</span>
           </div>
-          <p className="text-blue-600 text-sm mt-1">
+          <p className="text-[#1c90a6] text-sm mt-1">
             Email: {userEmail}
           </p>
         </div>
@@ -148,11 +148,11 @@ export function PasswordSetupModal({ isOpen, userEmail, userName, onSuccess }: P
 
           {successMessage && (
             <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-              <div className="flex items-center space-x-2 text-green-700">
+              <div className="flex items-center space-x-2 text-[#1c90a6]">
                 <CheckCircle className="h-4 w-4" />
                 <span className="text-sm font-medium">Success</span>
               </div>
-              <p className="text-green-600 text-sm mt-1">{successMessage}</p>
+              <p className="text-[#1c90a6] text-sm mt-1">{successMessage}</p>
             </div>
           )}
 
@@ -185,7 +185,7 @@ export function PasswordSetupModal({ isOpen, userEmail, userName, onSuccess }: P
                   <span className="text-gray-600">Password Strength:</span>
                   <span className={`font-medium ${
                     passwordStrength.strength < 40 ? 'text-red-600' :
-                    passwordStrength.strength < 70 ? 'text-yellow-600' : 'text-green-600'
+                    passwordStrength.strength < 70 ? 'text-yellow-600' : 'text-[#1c90a6]'
                   }`}>
                     {passwordStrength.label}
                   </span>

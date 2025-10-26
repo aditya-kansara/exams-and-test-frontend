@@ -70,7 +70,7 @@ export function CoverageBar({ results, className }: CoverageBarProps) {
             </div>
             <div className="w-full bg-secondary rounded-full h-2 mt-1">
               <div 
-                className="bg-green-500 h-2 rounded-full transition-all duration-300"
+                className="bg-[#1c90a6] h-2 rounded-full transition-all duration-300"
                 style={{ width: `${Math.min(area.percentage, 100)}%` }}
               />
             </div>

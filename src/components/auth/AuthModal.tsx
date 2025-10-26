@@ -173,11 +173,11 @@ export function AuthModal({ isOpen, onClose, onSuccess, provider = 'google' }: A
 
           {successMessage && (
             <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-              <div className="flex items-center space-x-2 text-green-700">
+              <div className="flex items-center space-x-2 text-[#1c90a6]">
                 <CheckCircle className="h-4 w-4" />
                 <span className="text-sm font-medium">Success</span>
               </div>
-              <p className="text-green-600 text-sm mt-1">{successMessage}</p>
+              <p className="text-[#1c90a6] text-sm mt-1">{successMessage}</p>
             </div>
           )}
 
@@ -227,7 +227,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, provider = 'google' }: A
 
           {/* Registration Policy Note */}
           <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-            <p className="text-xs text-blue-700 text-center">
+            <p className="text-xs text-[#1c90a6] text-center">
               <strong>Registration Policy:</strong> New users must register with Google OAuth. 
               Email/password login is only available for existing users who have set a password.
             </p>

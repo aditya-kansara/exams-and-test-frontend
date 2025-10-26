@@ -65,7 +65,7 @@ export function QuestionCard({ item, onSubmit, isLoading, questionNumber, isLast
             disabled={isLoading || isSubmitting}
             className={`w-full p-6 text-left rounded-lg border-2 transition-all duration-200 ${
               selectedOption === index + 1 
-                ? 'border-blue-500 bg-blue-50 text-blue-900' 
+                ? 'border-[#1c90a6] bg-[#1c90a6]/10 text-[#1c90a6]' 
                 : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
             } ${isLoading || isSubmitting ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
           >

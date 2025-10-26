@@ -10,10 +10,10 @@
     --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 222.2 84% 4.9%;
-    /* Academic emerald - professional and clean */
-    --primary: 158 64% 45%;         /* hsl(158 64% 45%) - emerald 500 */
+    /* AMC simulation color - professional teal */
+    --primary: 188 71% 38%;         /* hsl(188 71% 38%) - AMC simulation color #1c90a6 */
     --primary-foreground: 0 0% 100%;
-    --primary-hover: 158 64% 38%;   /* hsl(158 64% 38%) - darker emerald for hover */
+    --primary-hover: 188 71% 30%;   /* hsl(188 71% 30%) - darker teal for hover */
     --secondary: 210 40% 96%;
     --secondary-foreground: 222.2 84% 4.9%;
     --muted: 210 40% 96%;
@@ -35,9 +35,9 @@
     --card-foreground: 210 40% 98%;
     --popover: 222.2 84% 4.9%;
     --popover-foreground: 210 40% 98%;
-    --primary: 158 64% 45%;
+    --primary: 188 71% 38%;
     --primary-foreground: 0 0% 100%;
-    --primary-hover: 158 64% 38%;
+    --primary-hover: 188 71% 30%;
     --secondary: 217.2 32.6% 17.5%;
     --secondary-foreground: 210 40% 98%;
     --muted: 217.2 32.6% 17.5%;
@@ -79,7 +79,7 @@
 }
 
 .option-button.correct {
-  @apply bg-green-100 text-green-800 border-green-300;
+  @apply bg-[#1c90a6]/10 text-[#1c90a6] border-[#1c90a6]/30;
 }
 
 .option-button.incorrect {
@@ -395,13 +395,6 @@ html:focus-within {
   /* Full width helper */
   .btn--block { width: 100%; }
 
-  /* Social buttons (icon left, equal height) */
-  .btn--social {
-    border: 1px solid rgba(15,23,42,.16);
-    background: #fff;
-    color: #0f172a;
-  }
-  .btn--social:hover { background: #f8fafc; }
 
   .btn__icon {
     width: 18px;
@@ -447,8 +440,6 @@ html:focus-within {
   .hr-or { margin-top: 1rem; color: #8a97a5; }
   .hr-or::before, .hr-or::after { background: rgba(100,116,139,.28); }
 
-  /* Social row equal widths */
-  .social-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: .75rem; }
 
   /* Remember/forgot row spacing */
   .login-utility { display: flex; justify-content: space-between; align-items: center; margin-top: .5rem; }
@@ -512,7 +503,7 @@ html:focus-within {
 
 /* CTA variants to mirror HR buttons */
 .btn-solid {
-  background: #0F172A; /* slate-900 like HR black button */
+  background: #1c90a6; /* AMC simulation color */
   color: white;
 }
 .btn-solid:hover { filter: brightness(0.92); }
@@ -561,11 +552,10 @@ html:focus-within {
 .hero-question {
   font-size: clamp(2rem, 4vw, 3rem); /* bigger question */
   font-weight: 700;
-  color: #10b981; /* emerald */
+  color: #1c90a6; /* AMC simulation color */
   line-height: 1.3;
   text-align: center;
   letter-spacing: 0.05em;
-  text-transform: uppercase;
 }
 
 .hero-heading {
@@ -587,7 +577,7 @@ html:focus-within {
 }
 
 .gradient-text {
-  background: linear-gradient(to right, #10b981, #059669);
+  background: linear-gradient(to right, #1c90a6, #0d7a8a);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -775,7 +765,7 @@ section {
 
 /* buttons */
 .btn-dark {
-  background: #000; color: #fff;
+  background: #1c90a6; color: #fff; /* AMC simulation color */
   border-radius: .625rem;
   padding: .875rem 1.25rem;
   font-weight: 600;
@@ -853,12 +843,12 @@ section {
     #ffffff 0%,
     #ffffff 40%,
     #fefefe 50%,
-    #f8fffe 60%,
-    #f0fdfa 70%,
-    #e6fbf3 80%,
-    #d7f7ea 90%,
-    #ecfdf5 95%,
-    #f0fdfa 98%,
+    #f8fdfe 60%,
+    #f0f9fa 70%,
+    #e6f7f8 80%,
+    #d7f0f2 90%,
+    #ecf8f9 95%,
+    #f0f9fa 98%,
     #ffffff 100%
   );
 }

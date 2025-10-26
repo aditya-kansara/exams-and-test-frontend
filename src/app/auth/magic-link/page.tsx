@@ -32,7 +32,7 @@ function MagicLinkContent() {
         
         // Redirect to home page after successful verification
         setTimeout(() => {
-          router.push('/')
+          router.push('/dashboard')
         }, 2000)
       } catch (err) {
         setStatus('error')
@@ -49,8 +49,8 @@ function MagicLinkContent() {
       <Card className="max-w-md w-full">
         <CardHeader className="text-center">
           <CardTitle className="flex items-center justify-center space-x-2">
-            {status === 'verifying' && <Loader2 className="h-6 w-6 animate-spin text-blue-600" />}
-            {status === 'success' && <CheckCircle className="h-6 w-6 text-green-600" />}
+            {status === 'verifying' && <Loader2 className="h-6 w-6 animate-spin text-[#1c90a6]" />}
+            {status === 'success' && <CheckCircle className="h-6 w-6 text-[#1c90a6]" />}
             {status === 'error' && <XCircle className="h-6 w-6 text-red-600" />}
             <span>Magic Link Verification</span>
           </CardTitle>
@@ -66,7 +66,7 @@ function MagicLinkContent() {
 
           {status === 'success' && (
             <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-6">
-              <p className="text-green-600 text-sm">
+              <p className="text-[#1c90a6] text-sm">
                 You have been successfully authenticated. Redirecting to the home page...
               </p>
             </div>
@@ -75,7 +75,7 @@ function MagicLinkContent() {
           <div className="space-y-3">
             {status === 'error' && (
               <Button
-                onClick={() => router.push('/')}
+                onClick={() => router.push('/dashboard')}
                 variant="outline"
                 className="w-full"
               >
@@ -84,7 +84,7 @@ function MagicLinkContent() {
             )}
             
             <Button
-              onClick={() => router.push('/')}
+              onClick={() => router.push('/dashboard')}
               className="w-full"
             >
               Continue to answersAndTests
@@ -103,7 +103,7 @@ export default function MagicLinkPage() {
         <Card className="max-w-md w-full">
           <CardHeader className="text-center">
             <CardTitle className="flex items-center justify-center space-x-2">
-              <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+              <Loader2 className="h-6 w-6 animate-spin text-[#1c90a6]" />
               <span>Loading...</span>
             </CardTitle>
           </CardHeader>

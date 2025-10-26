@@ -1,249 +1,289 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
-import { Button } from '@/components/ui/Button'
-import { Badge } from '@/components/ui/Badge'
-import { 
-  User, 
-  Clock, 
-  Target, 
-  TrendingUp, 
-  Award,
-  Settings,
-  History
-} from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
+import { useAuth } from '@/contexts/AuthContext'
+import { LogOut, Save } from 'lucide-react'
 
-interface UserStats {
-  totalExams: number
-  averageAbility: number
-  lastExamDate: string
-  bestAbility: number
+interface ProfileData {
+  fullName: string
+  displayName: string
+  examDate: string
+  amcNumber: string
+  address: string
+  email: string
 }
 
 export default function AccountPage() {
-  const [userStats, setUserStats] = useState<UserStats | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
+  const router = useRouter()
+  const { user, isAuthenticated, isLoading, signOut } = useAuth()
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveMessage, setSaveMessage] = useState<string | null>(null)
+
+  const [profileData, setProfileData] = useState<ProfileData>({
+    fullName: '',
+    displayName: '',
+    examDate: '',
+    amcNumber: '',
+    address: '',
+    email: user?.email || ''
+  })
 
   useEffect(() => {
-    // In a real app, this would fetch user data from the API
-    // For now, we'll simulate loading
-    setTimeout(() => {
-      setUserStats({
-        totalExams: 5,
-        averageAbility: 1.23,
-        lastExamDate: '2024-01-15',
-        bestAbility: 2.15
-      })
-      setIsLoading(false)
-    }, 1000)
-  }, [])
+    if (!isLoading && !isAuthenticated) {
+      router.replace('/login')
+    }
+  }, [isAuthenticated, isLoading, router])
+
+  useEffect(() => {
+    if (user?.email) {
+      setProfileData(prev => ({
+        ...prev,
+        email: user.email || ''
+      }))
+    }
+  }, [user])
+
+  const handleLogout = async () => {
+    try {
+      setIsLoggingOut(true)
+      await signOut()
+      router.replace('/')
+    } catch (error) {
+      console.error('Logout error:', error)
+    } finally {
+      setIsLoggingOut(false)
+    }
+  }
+
+  const handleInputChange = (field: keyof ProfileData, value: string) => {
+    setProfileData(prev => ({
+      ...prev,
+      [field]: value
+    }))
+  }
+
+  const handleSave = async () => {
+    try {
+      setIsSaving(true)
+      setSaveMessage(null)
+      
+      // In a real app, this would save to the backend
+      // For now, we'll simulate saving
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      
+      setSaveMessage('Profile saved successfully!')
+      
+      // Clear success message after 3 seconds
+      setTimeout(() => {
+        setSaveMessage(null)
+      }, 3000)
+    } catch (error) {
+      console.error('Save error:', error)
+      setSaveMessage('Error saving profile. Please try again.')
+    } finally {
+      setIsSaving(false)
+    }
+  }
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen grid place-items-center bg-white text-slate-900">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading account information...</p>
+          <div className="w-8 h-8 border-4 border-[hsl(var(--primary))] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-slate-600">Loading...</p>
         </div>
       </div>
     )
   }
 
+  if (!isAuthenticated) {
+    return null // Will redirect to login
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
-        {/* Header */}
+      {/* Header */}
+      <header className="bg-white border-b border-gray-200 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            {/* Left - ET Logo */}
+            <div className="flex items-center">
+              <Link href="/dashboard" className="flex items-center gap-2">
+                <div className="h-8 w-8">
+                  <Image
+                    src="/Examsandtest logo.png"
+                    alt="Exams And Test Logo"
+                    width={32}
+                    height={32}
+                    className="h-full w-full object-contain"
+                  />
+                </div>
+                <span className="text-xl font-semibold text-gray-900">
+                  Exams And Test
+                </span>
+              </Link>
+            </div>
+
+            {/* Right - Back to Dashboard and Logout buttons */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => router.push('/dashboard')}
+                className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100/50 backdrop-blur-sm border border-gray-300 rounded-md hover:bg-gray-200/50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1c90a6] transition-colors"
+              >
+                Back to Dashboard
+              </button>
+              
+              <button
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#1c90a6] border border-transparent rounded-md hover:bg-[#0d7a8a] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1c90a6] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <LogOut className="h-4 w-4" />
+                {isLoggingOut ? 'Logging out...' : 'Logout'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Page Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            My Account
-          </h1>
-          <p className="text-gray-600">
-            Manage your exam history and account settings
-          </p>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">Profile Setup</h1>
+          <p className="text-gray-600">Complete your profile information</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Profile Section */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* User Info */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <User className="h-6 w-6" />
-                  <span>Profile Information</span>
-                </CardTitle>
-                <CardDescription>
-                  Your account details and preferences
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium text-gray-700">Email</label>
-                      <p className="text-gray-900">user@example.com</p>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-700">Member Since</label>
-                      <p className="text-gray-900">January 2024</p>
-                    </div>
-                  </div>
-                  <div className="pt-4">
-                    <Button variant="outline" className="flex items-center space-x-2">
-                      <Settings className="h-4 w-4" />
-                      <span>Edit Profile</span>
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+        {/* Profile Form */}
+        <div className="bg-white rounded-xl shadow-md p-8">
+          <form className="space-y-6">
+            {/* Full Name */}
+            <div>
+              <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-2">
+                Full Name *
+              </label>
+              <input
+                type="text"
+                id="fullName"
+                value={profileData.fullName}
+                onChange={(e) => handleInputChange('fullName', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1c90a6] focus:border-transparent transition-colors"
+                placeholder="Enter your full name"
+                required
+              />
+            </div>
 
-            {/* Exam History */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <History className="h-6 w-6" />
-                  <span>Recent Exams</span>
-                </CardTitle>
-                <CardDescription>
-                  Your latest exam attempts and results
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {/* Mock exam history */}
-                  {[
-                    { date: '2024-01-15', ability: 2.15, items: 28, duration: '45m' },
-                    { date: '2024-01-10', ability: 1.89, items: 25, duration: '52m' },
-                    { date: '2024-01-05', ability: 1.67, items: 22, duration: '38m' },
-                  ].map((exam, index) => (
-                    <div key={index} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
-                      <div className="flex items-center space-x-4">
-                        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                          <Target className="h-5 w-5 text-blue-600" />
-                        </div>
-                        <div>
-                          <p className="font-medium">Exam #{exam.date}</p>
-                          <p className="text-sm text-gray-600">
-                            {exam.items} items • {exam.duration}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <Badge className="bg-green-100 text-green-800">
-                          θ = {exam.ability}
-                        </Badge>
-                        <Link href={`/results/${exam.date}`}>
-                          <Button variant="outline" size="sm" className="mt-2">
-                            View Results
-                          </Button>
-                        </Link>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+            {/* Display Name */}
+            <div>
+              <label htmlFor="displayName" className="block text-sm font-medium text-gray-700 mb-2">
+                Display Name *
+              </label>
+              <input
+                type="text"
+                id="displayName"
+                value={profileData.displayName}
+                onChange={(e) => handleInputChange('displayName', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1c90a6] focus:border-transparent transition-colors"
+                placeholder="Enter your display name"
+                required
+              />
+            </div>
 
-          {/* Stats Sidebar */}
-          <div className="space-y-6">
-            {/* Quick Stats */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <TrendingUp className="h-6 w-6" />
-                  <span>Your Statistics</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-blue-600">
-                      {userStats?.totalExams}
-                    </div>
-                    <p className="text-sm text-gray-600">Total Exams</p>
-                  </div>
-                  
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-green-600">
-                      {userStats?.averageAbility.toFixed(2)}
-                    </div>
-                    <p className="text-sm text-gray-600">Average Ability</p>
-                  </div>
-                  
-                  <div className="text-center">
-                    <div className="text-3xl font-bold text-purple-600">
-                      {userStats?.bestAbility.toFixed(2)}
-                    </div>
-                    <p className="text-sm text-gray-600">Best Score</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            {/* Date of Exams */}
+            <div>
+              <label htmlFor="examDate" className="block text-sm font-medium text-gray-700 mb-2">
+                Date of Exams *
+              </label>
+              <input
+                type="date"
+                id="examDate"
+                value={profileData.examDate}
+                onChange={(e) => handleInputChange('examDate', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1c90a6] focus:border-transparent transition-colors"
+                required
+              />
+            </div>
 
-            {/* Quick Actions */}
-            <Card>
-              <CardHeader>
-                <CardTitle>Quick Actions</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Link href="/exam" className="block">
-                  <Button className="w-full justify-start">
-                    <Target className="h-4 w-4 mr-2" />
-                    Start New Exam
-                  </Button>
-                </Link>
-                
-                <Button variant="outline" className="w-full justify-start">
-                  <Award className="h-4 w-4 mr-2" />
-                  View Certificates
-                </Button>
-                
-                <Button variant="outline" className="w-full justify-start">
-                  <Settings className="h-4 w-4 mr-2" />
-                  Account Settings
-                </Button>
-              </CardContent>
-            </Card>
+            {/* AMC Number */}
+            <div>
+              <label htmlFor="amcNumber" className="block text-sm font-medium text-gray-700 mb-2">
+                AMC Number *
+              </label>
+              <input
+                type="text"
+                id="amcNumber"
+                value={profileData.amcNumber}
+                onChange={(e) => handleInputChange('amcNumber', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1c90a6] focus:border-transparent transition-colors"
+                placeholder="Enter your AMC number"
+                required
+              />
+            </div>
 
-            {/* Progress */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Clock className="h-6 w-6" />
-                  <span>Progress</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <div>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span>This Month</span>
-                      <span>3/5 exams</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="bg-blue-600 h-2 rounded-full" style={{ width: '60%' }}></div>
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span>Goal Progress</span>
-                      <span>75%</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div className="bg-green-600 h-2 rounded-full" style={{ width: '75%' }}></div>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+            {/* Address */}
+            <div>
+              <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-2">
+                Address *
+              </label>
+              <textarea
+                id="address"
+                value={profileData.address}
+                onChange={(e) => handleInputChange('address', e.target.value)}
+                rows={4}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1c90a6] focus:border-transparent transition-colors resize-none"
+                placeholder="Enter your address"
+                required
+              />
+            </div>
+
+            {/* Email */}
+            <div>
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                Email *
+              </label>
+              <input
+                type="email"
+                id="email"
+                value={profileData.email}
+                onChange={(e) => handleInputChange('email', e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1c90a6] focus:border-transparent transition-colors bg-gray-50"
+                placeholder="Enter your email"
+                required
+                disabled
+              />
+              <p className="mt-1 text-sm text-gray-500">Email cannot be changed as it's linked to your account</p>
+            </div>
+
+            {/* Save Button */}
+            <div className="pt-6">
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={isSaving}
+                className="w-full bg-[#1c90a6] hover:bg-[#0d7a8a] text-white font-semibold py-4 px-6 rounded-xl text-lg transition-colors duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-1 flex items-center justify-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Save className="h-5 w-5" />
+                {isSaving ? 'Saving...' : 'Save Profile'}
+              </button>
+            </div>
+
+            {/* Save Message */}
+            {saveMessage && (
+              <div className={`mt-4 p-4 rounded-lg text-center font-medium ${
+                saveMessage.includes('successfully') 
+                  ? 'bg-green-50 text-green-700 border border-green-200' 
+                  : 'bg-red-50 text-red-700 border border-red-200'
+              }`}>
+                {saveMessage}
+              </div>
+            )}
+          </form>
         </div>
-      </div>
+      </main>
     </div>
   )
 }

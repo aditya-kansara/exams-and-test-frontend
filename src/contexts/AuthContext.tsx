@@ -13,6 +13,7 @@ interface AuthContextType {
   signOut: () => Promise<void>
   signInWithGoogle: () => Promise<{ needsPassword?: boolean } | null>
   signInWithPassword: (credentials: { email: string; password: string; remember?: boolean }) => Promise<void>
+  signUpWithPassword: (credentials: { email: string; password: string }) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -138,6 +139,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  const signUpWithPassword = async (credentials: { email: string; password: string }) => {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: credentials.email,
+        password: credentials.password
+      })
+      
+      if (error) {
+        throw error
+      }
+      
+      // The auth state change will be handled by the onAuthStateChange listener
+    } catch (error) {
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Error signing up with password:', error)
+      }
+      throw error
+    }
+  }
+
   const value = {
     user,
     session,
@@ -145,7 +166,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isLoading,
     signOut,
     signInWithGoogle,
-    signInWithPassword
+    signInWithPassword,
+    signUpWithPassword
   }
 
   return (

@@ -2,9 +2,9 @@
 
 import { useRouter } from 'next/navigation'
 import { useState, useEffect } from 'react'
+import Image from 'next/image'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
-import { LogoET } from '@/components/ui/LogoET'
 import { Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react'
 
 export default function SetPasswordPage() {
@@ -35,7 +35,7 @@ export default function SetPasswordPage() {
     const hasPassword = user.user_metadata?.has_password === true
     
     if (hasEmailIdentity || hasPassword) {
-      router.replace('/')
+      router.replace('/dashboard')
       return
     }
   }, [isAuthenticated, user, router])
@@ -85,7 +85,7 @@ export default function SetPasswordPage() {
       
       // Redirect after showing success message
       setTimeout(() => {
-        router.replace('/')
+        router.replace('/dashboard')
       }, 2000)
     } catch (e: any) {
       setErr(e?.message ?? 'Could not set password')
@@ -105,7 +105,7 @@ export default function SetPasswordPage() {
     if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) strength++
 
     const labels = ['Very Weak', 'Weak', 'Fair', 'Good', 'Strong']
-    const colors = ['bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-blue-500', 'bg-green-500']
+    const colors = ['bg-red-500', 'bg-orange-500', 'bg-yellow-500', 'bg-blue-500', 'bg-[#1c90a6]']
     
     return {
       strength: (strength / 5) * 100,
@@ -133,8 +133,14 @@ export default function SetPasswordPage() {
         {/* Header */}
         <div className="text-center mb-6">
           <div className="flex items-center justify-center gap-2 mb-4">
-            <div className="h-8 w-8 text-[hsl(var(--primary))]">
-              <LogoET />
+            <div className="h-8 w-8">
+              <Image
+                src="/Examsandtest logo.png"
+                alt="Exams And Test Logo"
+                width={32}
+                height={32}
+                className="h-full w-full object-contain"
+              />
             </div>
             <span className="text-lg font-semibold">Exams And Test</span>
           </div>
@@ -145,12 +151,12 @@ export default function SetPasswordPage() {
         </div>
 
         {/* Google Account Info */}
-        <div className="mb-6 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <div className="flex items-center space-x-2 text-blue-700">
+        <div className="mb-6 p-3 bg-[#1c90a6]/10 border border-[#1c90a6]/20 rounded-lg">
+          <div className="flex items-center space-x-2 text-[#1c90a6]">
             <CheckCircle className="h-4 w-4" />
             <span className="text-sm font-medium">Google Account Connected</span>
           </div>
-          <p className="text-blue-600 text-sm mt-1">
+          <p className="text-[#1c90a6] text-sm mt-1">
             Email: {user.email}
           </p>
         </div>
@@ -169,11 +175,11 @@ export default function SetPasswordPage() {
 
           {success && (
             <div className="bg-green-50 border border-green-200 rounded-lg p-3">
-              <div className="flex items-center space-x-2 text-green-700">
+              <div className="flex items-center space-x-2 text-[#1c90a6]">
                 <CheckCircle className="h-4 w-4" />
                 <span className="text-sm font-medium">Success</span>
               </div>
-              <p className="text-green-600 text-sm mt-1">
+              <p className="text-[#1c90a6] text-sm mt-1">
                 Password set successfully! Redirecting...
               </p>
             </div>
@@ -206,7 +212,7 @@ export default function SetPasswordPage() {
                   <span className="text-gray-600">Password Strength:</span>
                   <span className={`font-medium ${
                     passwordStrength.strength < 40 ? 'text-red-600' :
-                    passwordStrength.strength < 70 ? 'text-yellow-600' : 'text-green-600'
+                    passwordStrength.strength < 70 ? 'text-yellow-600' : 'text-[#1c90a6]'
                   }`}>
                     {passwordStrength.label}
                   </span>

@@ -6,14 +6,14 @@ import { useEffect, useState, Suspense } from 'react'
 import Image from 'next/image'
 import { useAuth } from '@/contexts/AuthContext'
 
-function LoginContent() {
+function SignupContent() {
   const router = useRouter()
   const search = useSearchParams()
-  const { isAuthenticated, isLoading, signInWithGoogle, signInWithPassword } = useAuth()
+  const { isAuthenticated, isLoading, signInWithGoogle, signUpWithPassword } = useAuth()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [remember, setRemember] = useState(true)
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [err, setErr] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
@@ -31,21 +31,32 @@ function LoginContent() {
       await signInWithGoogle()
       // The redirect will be handled by Supabase OAuth flow
     } catch (e: any) {
-      setErr(e?.message ?? 'Could not sign in with Google')
+      setErr(e?.message ?? 'Could not sign up with Google')
     } finally {
       setSubmitting(false)
     }
   }
 
-  const onPasswordLogin = async (e: React.FormEvent) => {
+  const onPasswordSignup = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    if (password !== confirmPassword) {
+      setErr('Passwords do not match')
+      return
+    }
+
+    if (password.length < 6) {
+      setErr('Password must be at least 6 characters long')
+      return
+    }
+
     try {
       setErr(null)
       setSubmitting(true)
-      await signInWithPassword({ email, password, remember })
+      await signUpWithPassword({ email, password })
       // The redirect will be handled by the useEffect above
     } catch (e: any) {
-      setErr(e?.message ?? 'Invalid credentials')
+      setErr(e?.message ?? 'Could not create account')
     } finally {
       setSubmitting(false)
     }
@@ -71,7 +82,7 @@ function LoginContent() {
         <div className="stars2"></div>
         <div className="stars3"></div>
 
-        {/* Overlayed login text content */}
+        {/* Overlayed signup text content */}
         <div className="login-visual-inner relative z-10">
           <div className="login-brand-row">
             <div className="h-8 w-8">
@@ -87,7 +98,7 @@ function LoginContent() {
           </div>
           <div className="mt-6 h-px w-full" style={{background:'linear-gradient(90deg, transparent, rgba(148,163,184,.25), transparent)'}} />
 
-          <h1 className="login-title">Exams And Test Community</h1>
+          <h1 className="login-title">Join Exams And Test Community</h1>
           <p className="login-sub">
             Practice adaptively, certify skills, and gain insights that actually move the needle.
           </p>
@@ -106,11 +117,11 @@ function LoginContent() {
       <main className="login-form">
         <div className="login-card">
           <h2 className="login-headline">
-            Welcome back!
+            Create your account
           </h2>
 
           {/* Email/password form */}
-          <form onSubmit={onPasswordLogin} className="mt-6 space-y-3">
+          <form onSubmit={onPasswordSignup} className="mt-6 space-y-3">
             <div className="field">
               <label className="field__label" htmlFor="email">Your email</label>
               <input 
@@ -125,15 +136,30 @@ function LoginContent() {
             </div>
 
             <div className="field">
-              <label className="field__label" htmlFor="password">Your password</label>
+              <label className="field__label" htmlFor="password">Create password</label>
               <input 
                 id="password" 
                 className="input" 
                 type="password" 
                 value={password}
                 onChange={(e) => setPassword(e.target.value)} 
-                autoComplete="current-password" 
+                autoComplete="new-password" 
                 required 
+                minLength={6}
+              />
+            </div>
+
+            <div className="field">
+              <label className="field__label" htmlFor="confirmPassword">Confirm password</label>
+              <input 
+                id="confirmPassword" 
+                className="input" 
+                type="password" 
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)} 
+                autoComplete="new-password" 
+                required 
+                minLength={6}
               />
             </div>
 
@@ -142,26 +168,13 @@ function LoginContent() {
               disabled={submitting}
               type="submit"
             >
-              {submitting ? 'Logging in...' : 'Log in'}
+              {submitting ? 'Creating account...' : 'Sign up'}
             </button>
-
-            <div className="login-utility">
-              <label className="inline-flex items-center gap-2 text-slate-600">
-                <input
-                  type="checkbox"
-                  className="accent-[hsl(var(--primary))]"
-                  checked={remember}
-                  onChange={(e) => setRemember(e.target.checked)}
-                />
-                Remember me
-              </label>
-              <a href="/forgot-password">Forgot password?</a>
-            </div>
           </form>
 
           <div className="mt-6 hr-or">or</div>
 
-          {/* Google first (mandatory for new users) */}
+          {/* Google signup */}
           <button 
             onClick={onGoogle} 
             className="btn btn--outline btn--block mt-4" 
@@ -179,15 +192,14 @@ function LoginContent() {
             Continue with Google
           </button>
 
-
           {err && (
             <p className="mt-4 text-sm text-red-600">{err}</p>
           )}
 
           <p className="mt-6 text-sm text-slate-600">
-            Don't have an account?{' '}
-            <Link href="/signup" className="text-[hsl(var(--primary))] hover:opacity-90">
-              Sign up
+            Already have an account?{' '}
+            <Link href="/login" className="text-[hsl(var(--primary))] hover:opacity-90">
+              Log in
             </Link>
           </p>
         </div>
@@ -196,7 +208,7 @@ function LoginContent() {
   )
 }
 
-export default function LoginPage() {
+export default function SignupPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen grid place-items-center bg-white text-slate-900">
@@ -206,7 +218,7 @@ export default function LoginPage() {
         </div>
       </div>
     }>
-      <LoginContent />
+      <SignupContent />
     </Suspense>
   )
 }

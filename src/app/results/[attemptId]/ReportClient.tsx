@@ -32,8 +32,8 @@ export function ReportClient({ attemptId, results }: ReportClientProps) {
   // formatDuration function removed - not needed with new schema
 
   const getAbilityLevel = (theta: number) => {
-    if (theta >= 2) return { level: 'Advanced', color: 'bg-green-100 text-green-800' }
-    if (theta >= 1) return { level: 'Proficient', color: 'bg-blue-100 text-blue-800' }
+    if (theta >= 2) return { level: 'Advanced', color: 'bg-[#1c90a6]/10 text-[#1c90a6]' }
+    if (theta >= 1) return { level: 'Proficient', color: 'bg-[#1c90a6]/10 text-[#1c90a6]' }
     if (theta >= 0) return { level: 'Competent', color: 'bg-yellow-100 text-yellow-800' }
     if (theta >= -1) return { level: 'Developing', color: 'bg-orange-100 text-orange-800' }
     return { level: 'Beginner', color: 'bg-red-100 text-red-800' }
@@ -119,12 +119,12 @@ export function ReportClient({ attemptId, results }: ReportClientProps) {
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center space-x-2">
-                <Brain className="h-5 w-5 text-blue-600" />
+                <Brain className="h-5 w-5 text-[#1c90a6]" />
                 <span>Final Ability</span>
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-blue-600 mb-2">
+              <div className="text-3xl font-bold text-[#1c90a6] mb-2">
                 {results.theta_hat.toFixed(2)}
               </div>
               <Badge className={abilityLevel.color}>
@@ -139,12 +139,12 @@ export function ReportClient({ attemptId, results }: ReportClientProps) {
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-lg flex items-center space-x-2">
-                <CheckCircle className="h-5 w-5 text-green-600" />
+                <CheckCircle className="h-5 w-5 text-[#1c90a6]" />
                 <span>Questions</span>
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-bold text-green-600 mb-2">
+              <div className="text-3xl font-bold text-[#1c90a6] mb-2">
                 {results.total_items}
               </div>
               <p className="text-sm text-muted-foreground">

@@ -1,19 +1,28 @@
 'use client'
 
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
-import { ArrowRight, Building2, Mail, Phone, User } from 'lucide-react'
+import { Building2, Mail, User } from 'lucide-react'
 import clsx from 'clsx'
 import { AuthModal } from '@/components/auth/AuthModal'
 import { useAuth } from '@/contexts/AuthContext'
-import { LogoET } from '@/components/ui/LogoET'
 import Image from 'next/image'
 
 export default function ExamsAndTestLanding() {
+  const router = useRouter()
   const [scrolled, setScrolled] = useState(false)
   const [showContact, setShowContact] = useState(false)
+  const [showCareers, setShowCareers] = useState(false)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const { user, isAuthenticated, isLoading, signOut } = useAuth()
+
+  // Redirect authenticated users to dashboard
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      router.push('/dashboard')
+    }
+  }, [isAuthenticated, isLoading, router])
 
   // Mini reveal-on-scroll (no heavy libs)
   const revealRefs = useRef<HTMLElement[]>([])
@@ -73,19 +82,19 @@ export default function ExamsAndTestLanding() {
         <div className="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Link href="/" className="flex items-center gap-2">
-              <div className="h-8 w-8 text-[hsl(var(--primary))] hover:rotate-6 transition-transform duration-300">
-                <LogoET />
+              <div className="h-8 w-8 hover:rotate-6 transition-transform duration-300">
+                <Image
+                  src="/Examsandtest logo.png"
+                  alt="Exams And Test Logo"
+                  width={32}
+                  height={32}
+                  className="h-full w-full object-contain"
+                />
               </div>
               <span className="header-brand">
                 Exams <span>And Test</span>
               </span>
             </Link>
-            <button
-              onClick={() => setShowContact(true)}
-              className="hidden sm:inline-flex items-center gap-2 text-sm text-[hsl(var(--primary))] hover:opacity-90 transition link-underline"
-            >
-              Contact us <ArrowRight className="h-4 w-4" />
-            </button>
           </div>
 
           <div className="flex items-center gap-3">
@@ -123,39 +132,54 @@ export default function ExamsAndTestLanding() {
       </header>
 
       {/* SECTION 1 — HERO (HR-like) */}
-      <section className="section snap-child full-bleed bg-hero-white">
-        <div className="inner">
-          <div className="max-w-4xl">
-            <span className="inline-block rounded-full bg-[hsl(var(--primary))]/10 border border-[hsl(var(--primary))]/20 px-3 py-1 text-[12px] tracking-wide text-[hsl(var(--primary))] font-medium">
-              EXAMS AND TEST
-            </span>
-            <h1 className="mt-4 text-5xl sm:text-6xl font-semibold tracking-tight text-gray-900">
-              Prepare with <span className="text-[hsl(var(--primary))]">Adaptive Tests</span>
-            </h1>
-            <p className="mt-4 max-w-2xl text-lg text-gray-800">
-              Practice in a real-exam interface. Difficulty adapts to you, so every question counts.
-              Get focused insights, not guesswork.
-            </p>
+      <section className="section snap-child full-bleed relative min-h-screen overflow-hidden">
+        {/* Background image covering the whole section */}
+        <div className="absolute inset-0">
+          <Image
+            src="/Aboriginal art.jpeg"
+            alt="Aboriginal Art Background"
+            fill
+            className="object-cover"
+          />
+        </div>
+        
+        {/* White blur overlay extending across the page */}
+        <div className="absolute inset-0 bg-gradient-to-r from-white/90 via-white/80 via-white/70 via-white/50 via-white/30 to-transparent"></div>
+        {/* Additional blur only on the left side for text readability */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent via-transparent via-transparent to-transparent backdrop-blur-sm" style={{maskImage: 'linear-gradient(to right, black 0%, black 40%, transparent 100%)'}}></div>
+        
+        {/* Content */}
+        <div className="relative z-10 min-h-screen flex items-center">
+          <div className="inner">
+            <div className="max-w-4xl">
+              <h1 className="text-5xl sm:text-6xl font-semibold tracking-tight text-gray-900">
+                Prepare with <span className="text-[hsl(var(--primary))] tracking-wide">Exams and Test</span>
+              </h1>
+              <p className="mt-4 max-w-2xl text-lg text-gray-800">
+                Practice in a real-exam interface. Difficulty adapts to you, so every question counts.
+                Get focused insights, not guesswork.
+              </p>
 
-            <div className="mt-8 flex flex-wrap gap-3">
+              <div className="mt-8 flex flex-wrap gap-3">
               {isAuthenticated ? (
                 <Link href="/exam" className="btn-solid inline-flex items-center gap-2 rounded-md px-5 py-3 shadow transition">
-                  Start Test <ArrowRight className="h-4 w-4" />
+                  Start Test
                 </Link>
               ) : (
                 <Link
                   href="/login"
                   className="btn-solid inline-flex items-center gap-2 rounded-md px-5 py-3 shadow transition"
                 >
-                  Create a free account <ArrowRight className="h-4 w-4" />
+                  Create a free account
                 </Link>
               )}
               <Link
                 href="#about"
                 className="btn-ghost inline-flex items-center gap-2 rounded-md px-5 py-3 transition"
               >
-                Learn more <ArrowRight className="h-4 w-4" />
+                Learn more
               </Link>
+              </div>
             </div>
           </div>
         </div>
@@ -167,67 +191,65 @@ export default function ExamsAndTestLanding() {
         <div className="inner">
           <div className="max-w-4xl mx-auto text-center">
             <p className="hero-question mb-6">
-              What's Adaptive Testing?
+              What are Adaptive Exams?
             </p>
-            <h1 className="hero-heading">
-              Questions that adapt to <span className="gradient-text">your ability.</span>
+            <h1 className="text-4xl font-bold mb-4">
+              An exam based on the official structure of
             </h1>
+            <h2 className="text-4xl font-bold mb-4">
+              <span className="gradient-text">AMC MCQ exams</span>
+            </h2>
             <p className="hero-subheading mt-6">
-              Our engine estimates your ability in real time and selects each next item to be maximally
-              informative. You avoid "too easy / too hard" questions and reach a precise result faster —
-              so every minute you spend actually moves the needle.
+              Examsandtest is built to mirror the official Australian Medical Council MCQ format right down to the interface, timing, and flow. Every practice session feels like the real exam, giving you a chance to perfect your strategy, build confidence, and master time management before the big day.
             </p>
-            <ul className="mt-8 space-y-4 text-slate-700 text-lg max-w-2xl mx-auto">
-              <li className="flex items-start">
-                <span className="text-[hsl(var(--primary))] mr-3 mt-1">•</span>
-                <span>Difficulty adjusts after every response</span>
-              </li>
-              <li className="flex items-start">
-                <span className="text-[hsl(var(--primary))] mr-3 mt-1">•</span>
-                <span>Fewer items for the same measurement precision</span>
-              </li>
-              <li className="flex items-start">
-                <span className="text-[hsl(var(--primary))] mr-3 mt-1">•</span>
-                <span>Ability-aligned scoring (beyond raw %)</span>
-              </li>
-              <li className="flex items-start">
-                <span className="text-[hsl(var(--primary))] mr-3 mt-1">•</span>
-                <span>Clean, distraction-free exam interface</span>
-              </li>
-            </ul>
+            <br /><br />
+            <p className="hero-subheading mt-8">
+              Take as many mock exams as you need to sharpen your performance and get comfortable with the AMC's style and difficulty level. Each question is designed to challenge your reasoning, not your memory helping you prepare smarter, not harder.
+            </p>
+            <br /><br />
+            <p className="hero-subheading mt-8">
+              Join thousands of candidates who are practising smarter. Try our realistic AMC-style exams for free and experience the only platform that matches your preparation to your future success.
+            </p>
           </div>
         </div>
       </section>
 
 
       {/* SECTION 3 — AMC block */}
-      <section id="amc" className="section snap-child full-bleed bg-hero-aqua pb-0 pt-20" style={{alignItems: 'flex-start'}}>
-        <div className="inner">
-          <div className="grid items-center gap-12 lg:grid-cols-2">
-            {/* text first on desktop */}
-            <div>
-              <p className="text-sm tracking-wider uppercase text-[#1c90a6] font-medium mb-3">
-                AMC-Style Experience
-              </p>
-              <h2 className="amc-heading">
-                Practice in a real <span className="text-[#1c90a6]">AMC simulation</span>
-              </h2>
-              <p className="amc-subtext">
-                Timing, navigation, and reports mirror the Australian Medical Council's real exam flow,
-                ensuring that every test feels familiar and realistic. Our analytics highlight your
-                strengths and areas for improvement by domain and competency.
-              </p>
-            </div>
-
-            {/* image second on desktop; centered on mobile */}
-            <div className="flex justify-center">
-              <Image
-                src="/AMC.jpg"
-                alt="AMC Exam Interface"
-                width={600}
-                height={450}
-                className="amc-image"
-              />
+      <section id="amc" className="section snap-child full-bleed relative min-h-screen overflow-hidden">
+        {/* Background image covering the whole section */}
+        <div className="absolute inset-0">
+          <Image
+            src="/building.jpeg.jpeg"
+            alt="AMC Exam Interface"
+            fill
+            className="object-cover"
+          />
+        </div>
+        
+        {/* White blur overlay extending across the page */}
+        <div className="absolute inset-0 bg-gradient-to-r from-white/75 via-white/55 via-white/35 via-white/15 to-transparent"></div>
+        {/* Additional blur only on the left side for text readability */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent via-transparent via-transparent to-transparent backdrop-blur-sm" style={{maskImage: 'linear-gradient(to right, black 0%, black 40%, transparent 100%)'}}></div>
+        
+        {/* Content positioned to the left */}
+        <div className="relative z-10 min-h-screen flex items-center">
+          <div className="inner">
+            <div className="max-w-2xl">
+              {/* text positioned to the left */}
+              <div className="text-gray-900">
+                <p className="text-sm tracking-wider uppercase text-[#1c90a6] font-medium mb-3">
+                  AMC-Style Experience
+                </p>
+                <h2 className="amc-heading text-gray-900">
+                  Practice in a real <span className="text-[#1c90a6]">AMC simulation</span>
+                </h2>
+                <p className="amc-subtext text-gray-700">
+                  Timing, navigation, and reports mirror the Australian Medical Council's real exam flow,
+                  ensuring that every test feels familiar and realistic. Our analytics highlight your
+                  strengths and areas for improvement by domain and competency.
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -251,20 +273,14 @@ export default function ExamsAndTestLanding() {
               {isAuthenticated ? (
                 <Link href="/exam" className="btn-dark inline-flex items-center gap-2">
                   Start Test
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M5 12h14" /><path d="m12 5 7 7-7 7" />
-                  </svg>
                 </Link>
               ) : (
-                <button
-                  onClick={() => setShowAuthModal(true)}
+                <Link
+                  href="/signup"
                   className="btn-dark inline-flex items-center gap-2"
                 >
                   Create a free account
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M5 12h14" /><path d="m12 5 7 7-7 7" />
-                  </svg>
-                </button>
+                </Link>
               )}
             </div>
           </div>
@@ -282,9 +298,6 @@ export default function ExamsAndTestLanding() {
                 className="btn-dark inline-flex items-center gap-2"
               >
                 Contact us
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M5 12h14" /><path d="m12 5 7 7-7 7" />
-                </svg>
               </button>
             </div>
           </div>
@@ -296,8 +309,19 @@ export default function ExamsAndTestLanding() {
         <div className="mx-auto max-w-6xl px-4 py-6 text-sm text-slate-500 dark:text-slate-400 flex items-center justify-between">
           <p>© {new Date().getFullYear()} Exams And Test</p>
           <nav className="flex gap-4">
-            <Link href="/privacy" className="hover:text-slate-700 dark:hover:text-slate-200">Privacy</Link>
-            <Link href="/terms" className="hover:text-slate-700 dark:hover:text-slate-200">Terms</Link>
+            <button
+              onClick={() => setShowContact(true)}
+              className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+            >
+              Contact us
+            </button>
+            <button
+              onClick={() => setShowCareers(true)}
+              className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+            >
+              Careers
+            </button>
+            <Link href="/privacy-terms" className="hover:text-slate-700 dark:hover:text-slate-200">Privacy & Terms</Link>
           </nav>
         </div>
       </footer>
@@ -328,21 +352,12 @@ export default function ExamsAndTestLanding() {
             </div>
             <div className="space-y-4 text-slate-700">
               <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors">
-                <div className="p-2 rounded-full bg-emerald-100">
-                  <Mail className="h-5 w-5 text-emerald-600" />
+                <div className="p-2 rounded-full bg-[#1c90a6]/10">
+                  <Mail className="h-5 w-5 text-[#1c90a6]" />
                 </div>
                 <div>
                   <p className="text-sm text-slate-500">Email us</p>
-                  <a href="mailto:hello@examsandtest.com" className="font-medium hover:text-emerald-600 transition-colors">hello@examsandtest.com</a>
-                </div>
-              </div>
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors">
-                <div className="p-2 rounded-full bg-emerald-100">
-                  <Phone className="h-5 w-5 text-emerald-600" />
-                </div>
-                <div>
-                  <p className="text-sm text-slate-500">Call us</p>
-                  <a href="tel:+61-000-000-000" className="font-medium hover:text-emerald-600 transition-colors">+61 000 000 000</a>
+                  <a href="mailto:examsandtestfounder@gmail.com" className="font-medium hover:text-[#1c90a6] transition-colors">examsandtestfounder@gmail.com</a>
                 </div>
               </div>
             </div>
@@ -350,6 +365,45 @@ export default function ExamsAndTestLanding() {
               <button
                 className="px-6 py-3 rounded-lg bg-slate-900 text-white font-medium hover:bg-slate-800 transition-colors"
                 onClick={() => setShowContact(false)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Careers Modal */}
+      {showCareers && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          onClick={() => setShowCareers(false)}
+        >
+          <div
+            className="w-full max-w-lg rounded-2xl border border-slate-200/50 bg-white/95 backdrop-blur-md p-8 shadow-2xl animate-in zoom-in-95 slide-in-from-bottom-4 duration-300"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="text-center mb-6">
+              <h5 className="text-2xl font-semibold text-slate-900 mb-2">Careers</h5>
+              <p className="text-slate-600">
+                Join our team and help shape the future of adaptive testing.
+              </p>
+            </div>
+            <div className="space-y-4 text-slate-700">
+              <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors">
+                <div className="p-2 rounded-full bg-[#1c90a6]/10">
+                  <Mail className="h-5 w-5 text-[#1c90a6]" />
+                </div>
+                <div>
+                  <p className="text-sm text-slate-500">Send us your resume</p>
+                  <a href="mailto:examsandtestfounder@gmail.com" className="font-medium hover:text-[#1c90a6] transition-colors">examsandtestfounder@gmail.com</a>
+                </div>
+              </div>
+            </div>
+            <div className="mt-6 flex justify-center">
+              <button
+                className="px-6 py-3 rounded-lg bg-slate-900 text-white font-medium hover:bg-slate-800 transition-colors"
+                onClick={() => setShowCareers(false)}
               >
                 Close
               </button>

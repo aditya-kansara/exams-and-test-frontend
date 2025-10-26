@@ -65,7 +65,7 @@ export function ExamHeaderTimer({ timeRemaining, totalSeconds, className }: Prop
           className={clsx(
             'h-1 transition-[width] duration-500',
             tone === 'red' ? 'bg-red-500/90' :
-            tone === 'amber' ? 'bg-amber-500/90' : 'bg-emerald-500/90'
+            tone === 'amber' ? 'bg-amber-500/90' : 'bg-[#1c90a6]/90'
           )}
           style={{ width: `${pct}%` }}
           aria-hidden="true"
