@@ -18,8 +18,6 @@ import {
   ExamResultsSchema,
   ApiError,
   ApiErrorSchema,
-  MagicLinkVerifyResponse,
-  MagicLinkVerifyResponseSchema,
 } from './types'
 
 class ApiClient {
@@ -96,6 +94,7 @@ class ApiClient {
   async submitAnswer(answer: AnswerSubmitRequest): Promise<AnswerSubmitResponse> {
     const validatedAnswer = AnswerSubmitRequestSchema.parse(answer)
     const response = await this.client.post('/api/v1/exam/answer', validatedAnswer)
+    
     return AnswerSubmitResponseSchema.parse(response.data)
   }
 
@@ -103,6 +102,31 @@ class ApiClient {
     const validatedRequest = FinishRequestSchema.parse(finishRequest)
     const response = await this.client.post('/api/v1/exam/finish', validatedRequest)
     return FinishResponseSchema.parse(response.data)
+  }
+
+  // Payment API methods
+  async createPaymentOrder(orderData: {
+    amount: number
+    currency: string
+    receipt: string
+    notes?: Record<string, any>
+  }) {
+    const response = await this.client.post('/api/v1/payments/orders', orderData)
+    return response.data
+  }
+
+  async verifyPayment(paymentData: {
+    razorpay_order_id: string
+    razorpay_payment_id: string
+    razorpay_signature: string
+  }) {
+    const response = await this.client.post('/api/v1/payments/verify', paymentData)
+    return response.data
+  }
+
+  async getPaymentStatus(attemptId: string) {
+    const response = await this.client.get(`/api/v1/payments/status/${attemptId}`)
+    return response.data
   }
 
   async getExamResults(attemptId: string): Promise<ExamResults> {
@@ -115,14 +139,7 @@ class ApiClient {
     return ExamStateResponseSchema.parse(response.data)
   }
 
-  // Magic link authentication - Vercel cache fix with proper author
-  async verifyMagicLink(token: string, type: string = 'magiclink'): Promise<MagicLinkVerifyResponse> {
-    const response = await this.client.post('/auth/verify-magic-link', {
-      token,
-      type,
-    })
-    return MagicLinkVerifyResponseSchema.parse(response.data)
-  }
+  // Note: Magic link authentication has been removed
 
   // Note: Google OAuth is now handled by Supabase directly via supabase.auth.signInWithOAuth()
   // These backend endpoints are kept for server-side OAuth flows if needed
@@ -161,4 +178,4 @@ export const isNetworkError = (error: unknown): boolean => {
 }
 
 // Export types for convenience
-export type { ExamStartRequest, ExamStartResponse, AnswerSubmitRequest, AnswerSubmitResponse, ExamResults, MagicLinkVerifyResponse }
+export type { ExamStartRequest, ExamStartResponse, AnswerSubmitRequest, AnswerSubmitResponse, ExamResults }
