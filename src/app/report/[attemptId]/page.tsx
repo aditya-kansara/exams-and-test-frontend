@@ -122,8 +122,10 @@ export default function ReportPage() {
     
     // Developer tools unblocked for debugging: disable previous right-click/F12 blocking
     const enableDevToolsBlock = false
-    let handleContextMenu: ((e: MouseEvent) => void) | null = null
-    let handleKeyDown: ((e: KeyboardEvent) => void) | null = null
+    // Initialize with no-op handlers to satisfy strict typing
+    let handleContextMenu: (e: MouseEvent) => void = () => {}
+    let handleKeyDown: (e: KeyboardEvent) => void = () => {}
+    let devHandlersAttached = false
     if (enableDevToolsBlock) {
       handleContextMenu = (e: MouseEvent) => {
         e.preventDefault()
@@ -140,6 +142,7 @@ export default function ReportPage() {
       }
       document.addEventListener('contextmenu', handleContextMenu)
       document.addEventListener('keydown', handleKeyDown)
+      devHandlersAttached = true
     }
     
     // Periodic security check
@@ -183,10 +186,8 @@ export default function ReportPage() {
     // Cleanup function
     return () => {
       observer.disconnect()
-      if (handleContextMenu) {
+      if (devHandlersAttached) {
         document.removeEventListener('contextmenu', handleContextMenu)
-      }
-      if (handleKeyDown) {
         document.removeEventListener('keydown', handleKeyDown)
       }
       clearInterval(securityInterval)
