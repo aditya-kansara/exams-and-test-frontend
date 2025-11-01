@@ -183,6 +183,12 @@ export default function ExamsAndTestLanding() {
             </div>
           </div>
         </div>
+        {/* Acknowledgement banner at bottom of hero */}
+        <div className="absolute inset-x-0 bottom-6 z-20 flex justify-center px-4">
+          <div className="inline-flex rounded-md border border-slate-300/60 bg-white/50 dark:bg-slate-900/40 backdrop-blur-md shadow px-4 py-2 text-[14px] font-bold text-[hsl(var(--primary))] text-center">
+            The image displayed is an artwork created by Aboriginal and Torres Strait Islander peoples. We acknowledge and pay our respects by including this art.
+          </div>
+        </div>
       </section>
 
 
@@ -215,6 +221,32 @@ export default function ExamsAndTestLanding() {
       </section>
 
 
+      {/* SECTION 2.5 — Key points (left-aligned) */}
+      <section className="section snap-child full-bleed min-h-screen lg:h-screen">
+        <div className="inner h-full">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch h-full">
+            <div className="max-w-3xl">
+              <ul className="list-disc pl-6 space-y-4 text-lg text-slate-800">
+                <li>We test your knowledge and ability in the same way the AMC does.</li>
+                <li>Before spending nearly AUD 3000 on the official AMC exam – or even if you have already registered – start practising on an adaptive exam built on the same architecture as the AMC MCQ exam, completely FREE.</li>
+                <li>We also generate a detailed performance report similar to the one provided by the AMC after the official exam.</li>
+                <li>We also provide you detailed report with MCQs with correct answers and explanation, to help you prepare better.</li>
+                <li>Instead of paying AUD 3000 every time you sit the exam, prepare with us for free and only pay once when you are ready.</li>
+              </ul>
+            </div>
+            <div className="relative w-full h-80 sm:h-[60vh] lg:h-full lg:min-h-0 overflow-hidden bg-white">
+              <Image
+                src="/Report_page_1.png"
+                alt="Sample performance report"
+                fill
+                className="object-contain"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+
       {/* SECTION 3 — AMC block */}
       <section id="amc" className="section snap-child full-bleed relative min-h-screen overflow-hidden">
         {/* Background image covering the whole section */}
@@ -238,9 +270,6 @@ export default function ExamsAndTestLanding() {
             <div className="max-w-2xl">
               {/* text positioned to the left */}
               <div className="text-gray-900">
-                <p className="text-sm tracking-wider uppercase text-[#1c90a6] font-medium mb-3">
-                  AMC-Style Experience
-                </p>
                 <h2 className="amc-heading text-gray-900">
                   Practice in a real <span className="text-[#1c90a6]">AMC simulation</span>
                 </h2>

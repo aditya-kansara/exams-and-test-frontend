@@ -56,7 +56,6 @@ export function ExamHeaderTimer({ timeRemaining, totalSeconds, className }: Prop
           </div>
           <div className="text-[11px] leading-none text-slate-500">Time remaining</div>
         </div>
-        <div className="hidden sm:block text-[11px] text-slate-400 text-right min-w-[3.2ch]">{Math.round(pct)}%</div>
       </div>
 
       {/* Progress bar - slimmer and calmer */}

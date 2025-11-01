@@ -5,18 +5,44 @@ import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
-import { LogOut, BookOpen, Calendar, Clock, Award } from 'lucide-react'
+import { LogOut, BookOpen, Calendar, Clock, CheckCircle, AlertCircle } from 'lucide-react'
+import { apiClient, handleApiError } from '@/lib/api'
+import { UserAttemptSummary } from '@/lib/types'
 
 export default function ExamsPage() {
   const router = useRouter()
   const { user, isAuthenticated, isLoading, signOut } = useAuth()
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [attempts, setAttempts] = useState<UserAttemptSummary[]>([])
+  const [isLoadingAttempts, setIsLoadingAttempts] = useState(false)
+  const [attemptsError, setAttemptsError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       router.replace('/login')
     }
   }, [isAuthenticated, isLoading, router])
+
+  // Fetch user attempts when authenticated
+  useEffect(() => {
+    if (isAuthenticated && !isLoading) {
+      fetchUserAttempts()
+    }
+  }, [isAuthenticated, isLoading])
+
+  const fetchUserAttempts = async () => {
+    try {
+      setIsLoadingAttempts(true)
+      setAttemptsError(null)
+      const response = await apiClient.getUserAttempts(50, 0) // Get more attempts for this page
+      setAttempts(response.attempts)
+    } catch (error) {
+      console.error('Error fetching user attempts:', error)
+      setAttemptsError(handleApiError(error))
+    } finally {
+      setIsLoadingAttempts(false)
+    }
+  }
 
   const handleLogout = async () => {
     try {
@@ -30,39 +56,38 @@ export default function ExamsPage() {
     }
   }
 
-  // Mock data - in a real app, this would come from an API
-  const mockExams = [
-    {
-      id: '1',
-      date: '2024-01-15',
-      title: 'AMC Practice Exam #1',
-      score: 85,
-      totalQuestions: 25,
-      duration: '45m',
-      status: 'Completed',
-      ability: 1.2
-    },
-    {
-      id: '2', 
-      date: '2024-01-10',
-      title: 'AMC Practice Exam #2',
-      score: 78,
-      totalQuestions: 22,
-      duration: '38m',
-      status: 'Completed',
-      ability: 0.8
-    },
-    {
-      id: '3',
-      date: '2024-01-05',
-      title: 'AMC Practice Exam #3',
-      score: 92,
-      totalQuestions: 28,
-      duration: '52m',
-      status: 'Completed',
-      ability: 1.5
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    })
+  }
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return <CheckCircle className="h-4 w-4 text-green-500" />
+      case 'in_progress':
+        return <Clock className="h-4 w-4 text-yellow-500" />
+      default:
+        return <AlertCircle className="h-4 w-4 text-gray-500" />
     }
-  ]
+  }
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return 'Completed'
+      case 'in_progress':
+        return 'In Progress'
+      default:
+        return 'Unknown'
+    }
+  }
+
 
   if (isLoading) {
     return (
@@ -130,13 +155,41 @@ export default function ExamsPage() {
         <div className="max-w-4xl mx-auto">
           {/* Page Header */}
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Previous Exams</h1>
-            <p className="text-gray-600">View all the exams you have taken</p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">Previous Exams</h1>
+                <p className="text-gray-600">View all the exams you have taken</p>
+              </div>
+              <button
+                onClick={fetchUserAttempts}
+                disabled={isLoadingAttempts}
+                className="text-sm text-[#1c90a6] hover:text-[#0d7a8a] disabled:opacity-50"
+              >
+                {isLoadingAttempts ? 'Refreshing...' : 'Refresh'}
+              </button>
+            </div>
           </div>
 
           {/* Exams List */}
           <div className="space-y-4">
-            {mockExams.length === 0 ? (
+            {isLoadingAttempts ? (
+              <div className="text-center py-12">
+                <div className="w-8 h-8 border-4 border-[#1c90a6] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+                <p className="text-gray-600">Loading your exam attempts...</p>
+              </div>
+            ) : attemptsError ? (
+              <div className="text-center py-12">
+                <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+                <p className="text-red-600 mb-2">Failed to load exam attempts</p>
+                <p className="text-sm text-gray-600 mb-4">{attemptsError}</p>
+                <button
+                  onClick={fetchUserAttempts}
+                  className="text-sm text-[#1c90a6] hover:text-[#0d7a8a]"
+                >
+                  Try again
+                </button>
+              </div>
+            ) : attempts.length === 0 ? (
               <div className="text-center py-12">
                 <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-gray-900 mb-2">No exams taken yet</h3>
@@ -149,9 +202,9 @@ export default function ExamsPage() {
                 </button>
               </div>
             ) : (
-              mockExams.map((exam) => (
+              attempts.map((attempt) => (
                 <div
-                  key={exam.id}
+                  key={attempt.exam_attempt_id}
                   className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 border border-gray-200"
                 >
                   <div className="flex items-center justify-between">
@@ -159,36 +212,37 @@ export default function ExamsPage() {
                       <div className="flex items-center gap-4 mb-3">
                         <div className="flex items-center gap-2 text-sm text-gray-600">
                           <Calendar className="h-4 w-4" />
-                          {new Date(exam.date).toLocaleDateString()}
+                          {formatDate(attempt.started_at)}
                         </div>
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <Clock className="h-4 w-4" />
-                          {exam.duration}
-                        </div>
+                        {attempt.status !== 'completed' && (
+                          <div className="flex items-center gap-2 text-sm text-gray-600">
+                            {getStatusIcon(attempt.status)}
+                            {getStatusText(attempt.status)}
+                          </div>
+                        )}
                       </div>
                       <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                        {exam.title}
+                        Test Attempt #{attempt.exam_attempt_id}
                       </h3>
-                      <div className="flex items-center gap-6 text-sm text-gray-600">
-                        <span>Questions: {exam.totalQuestions}</span>
-                        <span>Status: {exam.status}</span>
-                        <span>Ability: {exam.ability}</span>
-                      </div>
+                      {/* Removed per request: questions/total items/score/ability row */}
                     </div>
                     <div className="flex items-center gap-3">
-                      <div className="text-right">
-                        <div className="text-2xl font-bold text-[#1c90a6]">
-                          {exam.score}%
-                        </div>
-                        <div className="text-sm text-gray-600">Score</div>
-                      </div>
-                      <Link
-                        href={`/results/${exam.id}`}
-                        className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-[#1c90a6] bg-[#1c90a6]/10 border border-[#1c90a6]/20 rounded-md hover:bg-[#1c90a6]/20 transition-colors"
-                      >
-                        <Award className="h-4 w-4" />
-                        View Results
-                      </Link>
+                      {/* Report / Continue buttons only (icons removed) */}
+                      {attempt.status === 'completed' ? (
+                        <button
+                          onClick={() => router.push(`/report/${attempt.exam_attempt_id}`)}
+                          className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-[#1c90a6] hover:bg-[#0d7a8a] border border-transparent rounded-md transition-colors"
+                        >
+                          Report
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => router.push(`/exam/${attempt.exam_attempt_id}`)}
+                          className="inline-flex items-center px-4 py-2 text-sm font-medium text-[#1c90a6] bg-[#1c90a6]/10 border border-[#1c90a6]/20 rounded-md hover:bg-[#1c90a6]/20 transition-colors"
+                        >
+                          Continue Exam
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>

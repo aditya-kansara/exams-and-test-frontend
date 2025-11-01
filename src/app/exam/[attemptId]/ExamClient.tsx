@@ -21,6 +21,8 @@ export function ExamClient({ attemptId, initialData }: ExamClientProps) {
   const router = useRouter()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [pilotStartPos, setPilotStartPos] = useState<number>(initialData.pilot_start_pos ?? 1)
+  const [learningRate] = useState<number>(initialData.learning_rate ?? 0.1)
   
   // Get store state and actions
   const {
@@ -51,6 +53,21 @@ export function ExamClient({ attemptId, initialData }: ExamClientProps) {
         setTimer(EXAM_CONFIG.DURATION_SECONDS)
     startTimer()
   }, [attemptId, initialData, setAttemptId, setCurrentItem, setPosition, setTimer, startTimer])
+
+  // Fallback: fetch pilot_start_pos from backend state if missing in initialData
+  useEffect(() => {
+    const ensurePilot = async () => {
+      if (!initialData.pilot_start_pos) {
+        try {
+          const state = await apiClient.getExamState(attemptId)
+          if (state.pilot_start_pos) setPilotStartPos(state.pilot_start_pos)
+        } catch (e) {
+          // swallow; will keep default
+        }
+      }
+    }
+    ensurePilot()
+  }, [attemptId, initialData.pilot_start_pos])
 
   // Timer effect
   useEffect(() => {
@@ -91,7 +108,9 @@ export function ExamClient({ attemptId, initialData }: ExamClientProps) {
         selected_option: response,
         response_time_ms: responseTimeMs,
         served_at: currentItem.created_at, // This is when the item was served
-        answered_at: new Date().toISOString() // Current timestamp when answered
+        answered_at: new Date().toISOString(), // Current timestamp when answered
+        pilot_start_pos: pilotStartPos,
+        learning_rate: learningRate,
       }
 
       const result = await apiClient.submitAnswer(answerRequest)
@@ -169,14 +188,12 @@ export function ExamClient({ attemptId, initialData }: ExamClientProps) {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-4xl font-bold text-[#1c90a6] mb-4">Exam Complete!</h1>
-          <p className="text-xl text-gray-600 mb-8">
-            Redirecting to your results...
-          </p>
+          {/* Removed redirecting helper text per requirement */}
           <Button 
-            onClick={() => router.push(`/results/${attemptId}`)}
+            onClick={() => router.push('/dashboard')}
             className="px-8 py-3 text-lg"
           >
-            View Results
+            Back to dashboard
           </Button>
         </div>
       </div>

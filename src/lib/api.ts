@@ -16,6 +16,10 @@ import {
   FinishResponseSchema,
   ExamResults,
   ExamResultsSchema,
+  UserAttemptsResponse,
+  UserAttemptsResponseSchema,
+  ExamQuestionsResponse,
+  ExamQuestionsResponseSchema,
   ApiError,
   ApiErrorSchema,
 } from './types'
@@ -129,6 +133,11 @@ class ApiClient {
     return response.data
   }
 
+  async confirmPayment(razorpayOrderId: string): Promise<{ status: string; unlocked?: boolean }> {
+    const response = await this.client.post('/api/v1/payments/confirm', { razorpay_order_id: razorpayOrderId })
+    return response.data
+  }
+
   async getExamResults(attemptId: string): Promise<ExamResults> {
     const response = await this.client.get(`/api/v1/exam/${attemptId}/report`)
     return ExamResultsSchema.parse(response.data)
@@ -137,6 +146,27 @@ class ApiClient {
   async getExamState(attemptId: string): Promise<ExamStateResponse> {
     const response = await this.client.get(`/api/v1/exam/${attemptId}/state`)
     return ExamStateResponseSchema.parse(response.data)
+  }
+
+  async getUserAttempts(limit: number = 10, offset: number = 0): Promise<UserAttemptsResponse> {
+    const response = await this.client.get('/api/v1/exam/attempts', {
+      params: { limit, offset }
+    })
+    return UserAttemptsResponseSchema.parse(response.data)
+  }
+
+  async getExamQuestions(attemptId: string): Promise<ExamQuestionsResponse> {
+    const response = await this.client.get(`/api/v1/exam/${attemptId}/questions`)
+    return ExamQuestionsResponseSchema.parse(response.data)
+  }
+
+  // Report generation
+  async generateReport(attemptId: number): Promise<Blob> {
+    const response = await this.client.post('/api/v1/reports/generate', 
+      { attempt_id: attemptId },
+      { responseType: 'blob' }
+    )
+    return response.data
   }
 
   // Note: Magic link authentication has been removed
@@ -178,4 +208,14 @@ export const isNetworkError = (error: unknown): boolean => {
 }
 
 // Export types for convenience
-export type { ExamStartRequest, ExamStartResponse, AnswerSubmitRequest, AnswerSubmitResponse, ExamResults }
+export type { 
+  ExamStartRequest, 
+  ExamStartResponse, 
+  AnswerSubmitRequest, 
+  AnswerSubmitResponse, 
+  ExamResults, 
+  UserAttemptsResponse, 
+  UserAttemptSummary, 
+  ExamQuestionsResponse, 
+  QuestionDetail 
+} from './types'

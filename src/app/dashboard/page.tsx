@@ -38,10 +38,6 @@ export default function DashboardPage() {
     router.push('/exams')
   }
 
-  const handlePreviousReports = () => {
-    router.push('/reports')
-  }
-
   if (isLoading) {
     return (
       <div className="min-h-screen grid place-items-center bg-white text-slate-900">
@@ -133,43 +129,24 @@ export default function DashboardPage() {
               </span>
             </button>
 
-            {/* Secondary Buttons Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Previous Exams */}
-              <button
-                onClick={handlePreviousResults}
-                className="relative overflow-hidden rounded-xl text-lg font-semibold py-6 px-8 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-1 flex items-center justify-center border border-gray-200 group"
-              >
-                <Image
-                  src="/Previous-test-results.jpg"
-                  alt="Previous Exams"
-                  fill
-                  className="object-cover blur-sm group-hover:blur-none transition-all duration-200"
-                />
-                <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-all duration-200"></div>
-                <span className="relative z-10 text-white font-semibold text-center">
-                  Previous Exams
-                </span>
-              </button>
-
-              {/* Previous Reports */}
-              <button
-                onClick={handlePreviousReports}
-                className="relative overflow-hidden rounded-xl text-lg font-semibold py-6 px-8 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-1 flex items-center justify-center border border-gray-200 group"
-              >
-                <Image
-                  src="/Previous-reports.jpg"
-                  alt="Previous Reports"
-                  fill
-                  className="object-cover blur-sm group-hover:blur-none transition-all duration-200"
-                />
-                <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-all duration-200"></div>
-                <span className="relative z-10 text-white font-semibold text-center">
-                  Previous Reports
-                </span>
-              </button>
-            </div>
+            {/* Previous Exams Button - Full Width */}
+            <button
+              onClick={handlePreviousResults}
+              className="w-full relative overflow-hidden rounded-xl text-lg font-semibold py-6 px-8 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-1 flex items-center justify-center border border-gray-200 group"
+            >
+              <Image
+                src="/Previous-test-results.jpg"
+                alt="Previous Exams"
+                fill
+                className="object-cover blur-sm group-hover:blur-none transition-all duration-200"
+              />
+              <div className="absolute inset-0 bg-black/40 group-hover:bg-black/20 transition-all duration-200"></div>
+              <span className="relative z-10 text-white font-semibold text-center">
+                Previous Exams
+              </span>
+            </button>
           </div>
+
 
         </div>
       </main>

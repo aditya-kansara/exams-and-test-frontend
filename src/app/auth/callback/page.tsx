@@ -152,7 +152,7 @@ function AuthCallbackContent() {
               onClick={() => router.push('/dashboard')}
               className="w-full"
             >
-              Continue to answersAndTests
+              Continue to Exams and Test
             </Button>
           </div>
         </CardContent>

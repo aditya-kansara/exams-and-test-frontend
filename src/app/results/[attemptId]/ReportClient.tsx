@@ -8,6 +8,7 @@ import { CoverageBar } from '@/components/charts/CoverageBar'
 import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
+import { apiClient } from '@/lib/api'
 import { 
   Download, 
   Clock, 
@@ -42,21 +43,10 @@ export function ReportClient({ attemptId, results }: ReportClientProps) {
   const handleDownloadReport = async () => {
     setIsGeneratingReport(true)
     try {
-      // Call the report generation API
-      const response = await fetch(`/api/report`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ attemptId }),
-      })
-
-      if (!response.ok) {
-        throw new Error('Failed to generate report')
-      }
+      // Call the report generation API using the API client
+      const blob = await apiClient.generateReport(parseInt(attemptId))
 
       // Create download link
-      const blob = await response.blob()
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url

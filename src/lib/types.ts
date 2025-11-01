@@ -28,6 +28,8 @@ export const ExamStartResponseSchema = z.object({
   exam_attempt_id: z.number(),
   position: z.number(),
   item: ItemPublicSchema,
+  pilot_start_pos: z.number(),
+  learning_rate: z.number(),
 })
 
 export const ExamStateResponseSchema = z.object({
@@ -40,6 +42,7 @@ export const ExamStateResponseSchema = z.object({
   theta_hat: z.number().nullable(),
   se_theta: z.number().nullable(),
   is_report_unlocked: z.boolean(),
+  pilot_start_pos: z.number().nullable().optional(),
 })
 
 export type ExamStartRequest = z.infer<typeof ExamStartRequestSchema>
@@ -56,6 +59,8 @@ export const AnswerSubmitRequestSchema = z.object({
   idempotency_key: z.string().optional(),
   served_at: z.string().optional(), // ISO datetime string
   answered_at: z.string().optional(), // ISO datetime string
+  pilot_start_pos: z.number(),
+  learning_rate: z.number().optional(),
 })
 
 export const AnswerSubmitResponseSchema = z.object({
@@ -65,6 +70,8 @@ export const AnswerSubmitResponseSchema = z.object({
   se: z.number(),
   stop: z.boolean(),
   item: ItemPublicSchema.nullable().optional(),
+  thetas_by_category: z.record(z.number()).optional(),
+  category_served_counts: z.record(z.number()).optional(),
 })
 
 export type AnswerSubmitRequest = z.infer<typeof AnswerSubmitRequestSchema>
@@ -98,6 +105,58 @@ export type FinishRequest = z.infer<typeof FinishRequestSchema>
 export type FinishResponse = z.infer<typeof FinishResponseSchema>
 
 export type ExamResults = z.infer<typeof ExamResultsSchema>
+
+// User Attempts Types
+export const UserAttemptSummarySchema = z.object({
+  exam_attempt_id: z.number(),
+  started_at: z.string(),
+  completed_at: z.string().nullable(),
+  total_items: z.number(),
+  items_scored: z.number(),
+  raw_score: z.number().nullable(),
+  scaled_score: z.number().nullable(),
+  theta_hat: z.number().nullable(),
+  se_theta: z.number().nullable(),
+  is_report_unlocked: z.boolean(),
+  status: z.string(), // "completed", "in_progress", "abandoned"
+})
+
+export const UserAttemptsResponseSchema = z.object({
+  attempts: z.array(UserAttemptSummarySchema),
+  total_count: z.number(),
+  limit: z.number(),
+  offset: z.number(),
+})
+
+export type UserAttemptSummary = z.infer<typeof UserAttemptSummarySchema>
+export type UserAttemptsResponse = z.infer<typeof UserAttemptsResponseSchema>
+
+// Question Detail Types
+export const QuestionDetailSchema = z.object({
+  id: z.number(),
+  position: z.number(),
+  question_text: z.string(),
+  option_a_text: z.string(),
+  option_b_text: z.string(),
+  option_c_text: z.string(),
+  option_d_text: z.string(),
+  option_e_text: z.string(),
+  correct_option: z.number(),
+  selected_option: z.number(),
+  is_correct: z.boolean(),
+  explanation: z.string(),
+  category: z.string(),
+  answered_at: z.string(),
+})
+
+export const ExamQuestionsResponseSchema = z.object({
+  exam_attempt_id: z.number(),
+  questions: z.array(QuestionDetailSchema),
+  total_questions: z.number(),
+})
+
+export type QuestionDetail = z.infer<typeof QuestionDetailSchema>
+export type ExamQuestionsResponse = z.infer<typeof ExamQuestionsResponseSchema>
 
 // WebSocket functionality removed - not needed for current backend
 

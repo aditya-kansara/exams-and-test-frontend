@@ -2,10 +2,12 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import Image from 'next/image'
+import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
-import { CheckCircle, Download, CreditCard, Home, Clock, Target } from 'lucide-react'
+import { CheckCircle, Download, CreditCard, Home } from 'lucide-react'
 import { apiClient } from '@/lib/api'
 import { useAuth } from '@/contexts/AuthContext'
 import { ExamStateResponse } from '@/lib/types'
@@ -166,10 +168,20 @@ export function SimpleResults({ attemptId }: SimpleResultsProps) {
             setPaymentStatus('completed')
             setIsReportUnlocked(true)
             
-            // Redirect to detailed report
-            router.push(`/results/${attemptId}/detailed`)
+            // Redirect to the detailed report page now that it is unlocked
+            if (typeof window !== 'undefined') {
+              window.location.href = `/report/${attemptId}`
+            } else {
+              router.push(`/report/${attemptId}`)
+            }
             } catch (err) {
               setError('Payment verification failed')
+              // Redirect to report with failure indicator to show error UI
+              if (typeof window !== 'undefined') {
+                window.location.href = `/report/${attemptId}?payment=failed`
+              } else {
+                router.push(`/report/${attemptId}?payment=failed`)
+              }
             }
         },
         theme: {
@@ -180,6 +192,26 @@ export function SimpleResults({ attemptId }: SimpleResultsProps) {
       try {
         const razorpay = new (window as any).Razorpay(options)
         razorpay.open()
+        // Fallback polling to confirm unlock if handler not invoked
+        try {
+          const maxTries = 24
+          let tries = 0
+          const interval = setInterval(async () => {
+            tries += 1
+            try {
+              const res = await apiClient.confirmPayment(orderResponse.id)
+              if (res?.status === 'captured' && res?.unlocked) {
+                clearInterval(interval)
+                if (typeof window !== 'undefined') {
+                  window.location.href = `/report/${attemptId}`
+                } else {
+                  router.push(`/report/${attemptId}`)
+                }
+              }
+            } catch (_) {}
+            if (tries >= maxTries) clearInterval(interval)
+          }, 5000)
+        } catch (_) {}
       } catch (razorpayError) {
         setError(`Razorpay error: ${razorpayError instanceof Error ? razorpayError.message : 'Unknown error'}`)
       }
@@ -195,7 +227,7 @@ export function SimpleResults({ attemptId }: SimpleResultsProps) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1c90a6] mx-auto mb-4"></div>
           <p className="text-gray-600">Loading results...</p>
         </div>
       </div>
@@ -238,19 +270,32 @@ export function SimpleResults({ attemptId }: SimpleResultsProps) {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Navigation Bar */}
-      <nav className="bg-white shadow-sm border-b">
+      <nav className="sticky top-0 z-50 bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
-              <h1 className="text-xl font-semibold text-gray-900">AMC Exam Results</h1>
+              <Link href="/dashboard" className="flex items-center gap-2">
+                <div className="h-8 w-8">
+                  <Image
+                    src="/Examsandtest logo.png"
+                    alt="Exams And Test Logo"
+                    width={32}
+                    height={32}
+                    className="h-full w-full object-contain"
+                  />
+                </div>
+                <span className="text-xl font-semibold text-gray-900">
+                  Exams <span className="text-[#1c90a6]">And Test</span>
+                </span>
+              </Link>
             </div>
             <Button 
               variant="outline" 
-              onClick={() => router.push('/')}
+              onClick={() => router.push('/dashboard')}
               className="flex items-center"
             >
               <Home className="w-4 h-4 mr-2" />
-              Back to Home
+              Back to Dashboard
             </Button>
           </div>
         </div>
@@ -260,10 +305,8 @@ export function SimpleResults({ attemptId }: SimpleResultsProps) {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="flex items-center justify-center mb-4">
-            <CheckCircle className="w-12 h-12 text-green-600 mr-4" />
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Exam Completed!</h1>
-              <p className="text-gray-600">Your adaptive exam has been finished</p>
             </div>
           </div>
         </div>
@@ -272,10 +315,9 @@ export function SimpleResults({ attemptId }: SimpleResultsProps) {
         <div className="flex justify-center mb-8">
           <Card className="w-64">
             <CardHeader className="text-center">
-              <CardTitle className="text-4xl font-bold text-purple-600">
+              <CardTitle className="text-4xl font-bold text-[#1c90a6]">
                 {results.theta_hat !== null && results.theta_hat !== undefined ? results.theta_hat.toFixed(2) : 'N/A'}
               </CardTitle>
-              <CardDescription>Ability Score (θ)</CardDescription>
             </CardHeader>
           </Card>
         </div>
@@ -310,7 +352,7 @@ export function SimpleResults({ attemptId }: SimpleResultsProps) {
 
               <div className="space-y-4">
                 <Button 
-                  onClick={() => router.push(`/results/${attemptId}/detailed`)}
+                  onClick={() => router.push(`/results/${attemptId}`)}
                   className="w-full bg-green-600 hover:bg-green-700 text-white py-3 text-lg"
                 >
                   <Download className="w-5 h-5 mr-2" />
@@ -323,7 +365,6 @@ export function SimpleResults({ attemptId }: SimpleResultsProps) {
           <Card className="mb-8">
             <CardHeader>
               <CardTitle className="flex items-center">
-                <Target className="w-5 h-5 mr-2" />
                 Unlock Detailed Report
               </CardTitle>
               <CardDescription>
@@ -331,11 +372,11 @@ export function SimpleResults({ attemptId }: SimpleResultsProps) {
               </CardDescription>
             </CardHeader>
             <CardContent>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-6">
+            <div className="bg-[#1c90a6]/10 border border-[#1c90a6]/20 rounded-lg p-6 mb-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-semibold text-blue-900">Detailed Report Includes:</h3>
-                  <ul className="text-blue-800 mt-2 space-y-1">
+                  <h3 className="text-lg font-semibold text-[#1c90a6]">Detailed Report Includes:</h3>
+                  <ul className="text-[#1c90a6] mt-2 space-y-1">
                     <li>• Category-wise performance analysis</li>
                     <li>• Ability estimates for each domain</li>
                     <li>• Confidence intervals and standard errors</li>
@@ -344,8 +385,8 @@ export function SimpleResults({ attemptId }: SimpleResultsProps) {
                   </ul>
                 </div>
                 <div className="text-right">
-                  <div className="text-3xl font-bold text-blue-900">{PAYMENT_CONFIG.DISPLAY_AMOUNT}</div>
-                  <div className="text-blue-600">One-time payment</div>
+                  <div className="text-3xl font-bold text-[#1c90a6]">{PAYMENT_CONFIG.DISPLAY_AMOUNT}</div>
+                  <div className="text-[#1c90a6]">One-time payment</div>
                 </div>
               </div>
             </div>
@@ -354,7 +395,7 @@ export function SimpleResults({ attemptId }: SimpleResultsProps) {
               <Button 
                 onClick={handlePayment}
                 disabled={paymentLoading}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 text-lg"
+                className="w-full bg-[#1c90a6] hover:bg-[#0d7a8a] text-white py-3 text-lg"
               >
                 {paymentLoading ? (
                   <>

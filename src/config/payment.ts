@@ -22,3 +22,13 @@ export const PAYMENT_CONFIG = {
   // Company name
   COMPANY_NAME: process.env.NEXT_PUBLIC_PAYMENT_COMPANY_NAME || 'Exams And Test',
 }
+
+
+
+
+
+
+
+
+
+

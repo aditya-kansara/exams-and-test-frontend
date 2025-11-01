@@ -57,3 +57,13 @@ export async function generateMetadata({ params }: SimpleResultsPageProps) {
     description: 'View your exam results and unlock detailed report',
   }
 }
+
+
+
+
+
+
+
+
+
+

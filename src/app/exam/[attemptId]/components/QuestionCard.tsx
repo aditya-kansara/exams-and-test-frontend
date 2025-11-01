@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/Button'
-import { CheckCircle, Clock } from 'lucide-react'
+import { Clock } from 'lucide-react'
 import { ItemPublic } from '@/lib/types'
 
 interface QuestionCardProps {
@@ -75,14 +75,8 @@ export function QuestionCard({ item, onSubmit, isLoading, questionNumber, isLast
                   ? 'border-blue-500 bg-blue-500 text-white' 
                   : 'border-gray-300'
               }`}>
-                {selectedOption === index + 1 && (
-                  <CheckCircle className="w-4 h-4" />
-                )}
               </div>
-              <span className="text-lg text-gray-900">
-                <span className="font-medium mr-3">{index + 1}.</span>
-                {option}
-              </span>
+              <span className="text-lg text-gray-900">{option}</span>
             </div>
           </button>
         ))}
