@@ -183,8 +183,12 @@ export default function ReportPage() {
     // Cleanup function
     return () => {
       observer.disconnect()
-      document.removeEventListener('contextmenu', handleContextMenu)
-      document.removeEventListener('keydown', handleKeyDown)
+      if (handleContextMenu) {
+        document.removeEventListener('contextmenu', handleContextMenu)
+      }
+      if (handleKeyDown) {
+        document.removeEventListener('keydown', handleKeyDown)
+      }
       clearInterval(securityInterval)
     }
   }
