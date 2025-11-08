@@ -2,7 +2,7 @@ import { Suspense } from 'react'
 import { notFound } from 'next/navigation'
 import { ExamClient } from './ExamClient'
 import { Skeleton } from '@/components/ui/Skeleton'
-import { ExamStartResponse } from '@/lib/types'
+import { ExamStartBatchResponse, ExamStartBatchResponseSchema } from '@/lib/types'
 
 interface ExamPageProps {
   params: {
@@ -13,13 +13,14 @@ interface ExamPageProps {
   }
 }
 
-async function getInitialData(searchParams: { data?: string }): Promise<ExamStartResponse | null> {
+async function getInitialData(searchParams: { data?: string }): Promise<ExamStartBatchResponse | null> {
   if (!searchParams.data) {
     return null
   }
-  
+
   try {
-    return JSON.parse(decodeURIComponent(searchParams.data)) as ExamStartResponse
+    const parsed = JSON.parse(decodeURIComponent(searchParams.data))
+    return ExamStartBatchResponseSchema.parse(parsed)
   } catch (error) {
     console.error('Failed to parse initial exam data:', error)
     return null

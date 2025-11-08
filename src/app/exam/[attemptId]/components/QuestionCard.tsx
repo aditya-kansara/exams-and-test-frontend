@@ -95,7 +95,7 @@ export function QuestionCard({ item, onSubmit, isLoading, questionNumber, isLast
               <span>{isLastQuestion ? 'Submitting...' : 'Loading...'}</span>
             </div>
           ) : (
-            isLastQuestion ? 'Submit Answer' : 'Next'
+            isLastQuestion ? 'Submit Exam' : 'Next'
           )}
         </Button>
       </div>

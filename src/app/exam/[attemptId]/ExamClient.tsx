@@ -1,198 +1,452 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ExamStartResponse, AnswerSubmitRequest } from '@/lib/types'
+import { AlertCircle } from 'lucide-react'
+import { ExamStartBatchResponse, BatchAnswerItem, AnswerBatchResponse, ItemPublic } from '@/lib/types'
 import { EXAM_CONFIG } from '@/config/exam'
 import { apiClient, handleApiError } from '@/lib/api'
-// WebSocket removed - not needed for current backend implementation
-import { useExamStore } from '@/lib/store/exam'
 import { QuestionCard } from './components/QuestionCard'
 import { ExamHeaderTimer } from './components/ExamHeaderTimer'
 import { Button } from '@/components/ui/Button'
-import { AlertCircle } from 'lucide-react'
 
 interface ExamClientProps {
   attemptId: string
-  initialData: ExamStartResponse
+  initialData: ExamStartBatchResponse
 }
 
-export function ExamClient({ attemptId, initialData }: ExamClientProps) {
-  const router = useRouter()
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [pilotStartPos, setPilotStartPos] = useState<number>(initialData.pilot_start_pos ?? 1)
-  const [learningRate] = useState<number>(initialData.learning_rate ?? 0.1)
-  
-  // Get store state and actions
-  const {
-    currentItem,
-    responses,
-    isComplete,
-    isLoading,
-    timer,
-    setAttemptId,
-    setCurrentItem,
-    setPosition,
-    addResponse,
-    setComplete,
-    setLoading,
-    setError: setStoreError,
-    setTimer,
-    startTimer,
-    stopTimer,
-    tickTimer
-  } = useExamStore()
+const BATCH_SIZE = 6
 
-  // Initialize exam state
-  useEffect(() => {
-    setAttemptId(parseInt(attemptId))
-    setCurrentItem(initialData.item)
-    setPosition(initialData.position)
-        // Set timer to configured exam duration
-        setTimer(EXAM_CONFIG.DURATION_SECONDS)
-    startTimer()
-  }, [attemptId, initialData, setAttemptId, setCurrentItem, setPosition, setTimer, startTimer])
+type ExamSessionState = {
+  attemptId: number | null
+  pilotStart: number | null
+  theta: number | null
+  se: number | null
+  learningRate: number
+  position: number
+  questionQueue: ItemPublic[]
+  answeredQueue: BatchAnswerItem[]
+  currentQuestion: ItemPublic | null
+  stop: boolean
+  isComplete: boolean
+}
 
-  // Fallback: fetch pilot_start_pos from backend state if missing in initialData
-  useEffect(() => {
-    const ensurePilot = async () => {
-      if (!initialData.pilot_start_pos) {
-        try {
-          const state = await apiClient.getExamState(attemptId)
-          if (state.pilot_start_pos) setPilotStartPos(state.pilot_start_pos)
-        } catch (e) {
-          // swallow; will keep default
-        }
+type ExamAction =
+  | { type: 'initialize'; payload: ExamStartBatchResponse }
+  | { type: 'record_answer'; payload: BatchAnswerItem }
+  | { type: 'apply_batch_result'; payload: AnswerBatchResponse }
+  | { type: 'mark_complete' }
+  | { type: 'clear_flushed_answers'; payload: BatchAnswerItem[] }
+
+const initialExamState: ExamSessionState = {
+  attemptId: null,
+  pilotStart: null,
+  theta: null,
+  se: null,
+  learningRate: 0.5,
+  position: 0,
+  questionQueue: [],
+  answeredQueue: [],
+  currentQuestion: null,
+  stop: false,
+  isComplete: false,
+}
+
+const splitInventory = (items: ItemPublic[]): { current: ItemPublic | null; queue: ItemPublic[] } => {
+  if (!items.length) {
+    return { current: null, queue: [] }
+  }
+  const [first, ...rest] = items
+  return { current: first, queue: rest }
+}
+
+const examReducer = (state: ExamSessionState, action: ExamAction): ExamSessionState => {
+  switch (action.type) {
+    case 'initialize': {
+      const { current, queue } = splitInventory(action.payload.question_inventory)
+      return {
+        attemptId: action.payload.exam_attempt_id,
+        pilotStart: action.payload.pilot_start_pos,
+        theta: action.payload.theta,
+        se: action.payload.se_theta,
+        learningRate: action.payload.learning_rate,
+        position: 0,
+        questionQueue: queue,
+        answeredQueue: [],
+        currentQuestion: current,
+        stop: current === null && queue.length === 0,
+        isComplete: false,
       }
     }
-    ensurePilot()
-  }, [attemptId, initialData.pilot_start_pos])
+    case 'record_answer': {
+      if (!state.currentQuestion) {
+        return state
+      }
 
-  // Timer effect
-  useEffect(() => {
-    if (!timer.isRunning) return
+      const updatedAnswer: BatchAnswerItem = {
+        ...action.payload,
+        item_id: action.payload.item_id ?? state.currentQuestion.id,
+      }
 
-    const interval = setInterval(() => {
-      tickTimer()
-    }, 1000)
+      const nextQueue = [...state.questionQueue]
+      const nextCurrent = nextQueue.shift() ?? null
 
-    return () => clearInterval(interval)
-  }, [timer.isRunning, tickTimer])
-
-  // Check for exam completion when timer reaches 0
-  useEffect(() => {
-    if (timer.timeRemaining <= 0 && timer.isRunning) {
-      handleTimeUp()
+      return {
+        ...state,
+        answeredQueue: [...state.answeredQueue, updatedAnswer],
+        questionQueue: nextQueue,
+        currentQuestion: nextCurrent,
+        position: state.position + 1,
+      }
     }
-  }, [timer.timeRemaining, timer.isRunning])
+    case 'apply_batch_result': {
+      let currentQuestion = state.currentQuestion
+      let questionQueue = state.questionQueue
 
-  // WebSocket functionality removed - not needed for current backend
+      if (action.payload.question_inventory?.length) {
+        if (!currentQuestion) {
+          const { current, queue } = splitInventory(action.payload.question_inventory)
+          currentQuestion = current
+          questionQueue = [...questionQueue, ...queue]
+        } else {
+          questionQueue = [...questionQueue, ...action.payload.question_inventory]
+        }
+      }
 
-  const handleTimeUp = useCallback(async () => {
-    stopTimer()
-    setComplete(true)
-    router.push(`/results/${attemptId}`)
-  }, [attemptId, stopTimer, setComplete, router])
+      if (!currentQuestion && questionQueue.length) {
+        const [next, ...rest] = questionQueue
+        currentQuestion = next
+        questionQueue = rest
+      }
 
-  const handleAnswerSubmit = async (response: number, responseTimeMs: number) => {
-    if (!currentItem || isSubmitting) return
+      return {
+        ...state,
+        attemptId: action.payload.exam_attempt_id ?? state.attemptId,
+        theta: action.payload.theta,
+        se: action.payload.se,
+        learningRate: action.payload.learning_rate,
+        position: action.payload.position,
+        stop: action.payload.stop,
+        currentQuestion,
+        questionQueue,
+      }
+    }
+    case 'mark_complete':
+      return {
+        ...state,
+        isComplete: true,
+        stop: true,
+      }
+    case 'clear_flushed_answers': {
+      if (!state.answeredQueue.length || !action.payload.length) {
+        return state
+      }
+      const flushedKeys = new Set(
+        action.payload.map((answer) => `${answer.item_id}-${answer.answered_at ?? ''}-${answer.selected_option}`)
+      )
+      return {
+        ...state,
+        answeredQueue: state.answeredQueue.filter(
+          (answer) =>
+            !flushedKeys.has(`${answer.item_id}-${answer.answered_at ?? ''}-${answer.selected_option}`)
+        ),
+      }
+    }
+    default:
+      return state
+  }
+}
+type TimerState = {
+  timeRemaining: number
+  isRunning: boolean
+}
 
-    setIsSubmitting(true)
-    setError(null)
+const initialTimerState: TimerState = {
+  timeRemaining: EXAM_CONFIG.DURATION_SECONDS,
+  isRunning: false,
+}
+
+export function ExamClient({ attemptId: _attemptId, initialData }: ExamClientProps) {
+  const router = useRouter()
+
+  const [examState, dispatch] = useReducer(examReducer, initialExamState)
+  const examStateRef = useRef(examState)
+  useEffect(() => {
+    examStateRef.current = examState
+  }, [examState])
+
+  const [timer, setTimerState] = useState<TimerState>(initialTimerState)
+  const [error, setError] = useState<string | null>(null)
+  const [isAnswering, setIsAnswering] = useState(false)
+  const [isFlushing, setIsFlushing] = useState(false)
+  const [isFinishing, setIsFinishing] = useState(false)
+
+  const isInteractionLocked = isAnswering || isFinishing
+  const { currentQuestion, questionQueue, answeredQueue, stop: stopFlag, position, isComplete } =
+    examState
+  const questionQueueLength = questionQueue.length
+  const answeredQueueLength = answeredQueue.length
+
+  const initializedAttemptRef = useRef<number | null>(null)
+  const autoFinishTriggeredRef = useRef(false)
+  const pendingFlushRef = useRef<{ force: boolean }>({ force: false })
+
+  useEffect(() => {
+    if (initializedAttemptRef.current === initialData.exam_attempt_id) {
+      return
+    }
+    initializedAttemptRef.current = initialData.exam_attempt_id
+    dispatch({ type: 'initialize', payload: initialData })
+    setTimerState({ timeRemaining: EXAM_CONFIG.DURATION_SECONDS, isRunning: true })
+    autoFinishTriggeredRef.current = false
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialData])
+
+  useEffect(() => {
+    if (!timer.isRunning) {
+      return
+    }
+    const interval = setInterval(() => {
+      setTimerState((prev) => {
+        if (!prev.isRunning || prev.timeRemaining <= 0) {
+          return prev
+        }
+        return { ...prev, timeRemaining: prev.timeRemaining - 1 }
+      })
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [timer.isRunning])
+
+  const flushAnswers = useCallback(
+    async (
+      force = false,
+      override?: {
+        answers: BatchAnswerItem[]
+        remainingInventory: number
+        currentPosition?: number
+      }
+    ) => {
+      if (isFlushing) {
+        const pendingForce = pendingFlushRef.current?.force ?? false
+        pendingFlushRef.current = { force: pendingForce || force }
+        return
+      }
+      pendingFlushRef.current = { force: false }
+      const state = examStateRef.current
+      const answers = override?.answers ?? state.answeredQueue
+      if (!state.attemptId || answers.length === 0) {
+        return
+      }
+
+      const buffered = answers.length
+      const remainingInventory =
+        override?.remainingInventory ??
+        ((state.currentQuestion ? 1 : 0) + state.questionQueue.length)
+      const queueMaxPosition =
+        state.questionQueue.length > 0
+          ? Math.max(...state.questionQueue.map((item) => item.position ?? 0))
+          : 0
+      const currentQuestionPosition = state.currentQuestion?.position ?? 0
+      const computedPosition = Math.max(
+        state.position,
+        currentQuestionPosition,
+        queueMaxPosition
+      )
+      const currentPosition = override?.currentPosition ?? computedPosition
+
+      if (
+        !force &&
+        !(buffered >= 3 && buffered % 3 === 0 && (remainingInventory <= 3 || buffered >= 6))
+      ) {
+        return
+      }
+
+      try {
+        setIsFlushing(true)
+        setError(null)
+
+        const payload = {
+          exam_attempt_id: state.attemptId,
+          answers,
+          batch_size: BATCH_SIZE,
+          learning_rate: state.learningRate,
+          current_position: currentPosition,
+        }
+
+        const answersToFlush = answers.map((answer) => ({ ...answer }))
+        const response = await apiClient.submitAnswerBatch(payload)
+        dispatch({ type: 'apply_batch_result', payload: response })
+        dispatch({ type: 'clear_flushed_answers', payload: answersToFlush })
+      } catch (err) {
+        setError(handleApiError(err))
+      } finally {
+        setIsFlushing(false)
+      }
+    },
+    [dispatch, isFlushing]
+  )
+
+  useEffect(() => {
+    if (isFlushing) {
+      return
+    }
+    const pendingForce = pendingFlushRef.current?.force ?? false
+    const hasPendingAnswers = examStateRef.current.answeredQueue.length > 0
+    if (pendingForce || hasPendingAnswers) {
+      pendingFlushRef.current = { force: false }
+      void flushAnswers(pendingForce)
+    }
+  }, [isFlushing, flushAnswers])
+
+  const finishExamFlow = useCallback(async () => {
+    const latestState = examStateRef.current
+    if (!latestState.attemptId || isFinishing) {
+      return
+    }
 
     try {
-      const answerRequest: AnswerSubmitRequest = {
-        exam_attempt_id: parseInt(attemptId),
-        item_id: currentItem.id,
-        selected_option: response,
-        response_time_ms: responseTimeMs,
-        served_at: currentItem.created_at, // This is when the item was served
-        answered_at: new Date().toISOString(), // Current timestamp when answered
-        pilot_start_pos: pilotStartPos,
-        learning_rate: learningRate,
+      setIsFinishing(true)
+      const finishResult = await apiClient.finishExam({
+        exam_attempt_id: latestState.attemptId,
+      })
+      dispatch({ type: 'mark_complete' })
+      setTimerState((prev) => ({ ...prev, isRunning: false }))
+
+      const finishData = {
+        score: finishResult.theta_hat?.toString() ?? '0',
+        theta: finishResult.theta_hat?.toString() ?? '0',
+        se: finishResult.se_theta?.toString() ?? '1',
+        completed: finishResult.completed_at,
       }
 
-      const result = await apiClient.submitAnswer(answerRequest)
-      
-      
-      // Add response to store
-      addResponse(answerRequest)
-
-      // Check if exam should stop
-      if (result.stop) {
-        try {
-          // Finish the exam
-          const finishResult = await apiClient.finishExam({
-            exam_attempt_id: parseInt(attemptId)
-          })
-          
-          setComplete(true)
-          stopTimer()
-          
-          // Redirect to simpleResults with finish data
-          const finishData = {
-            score: finishResult.theta_hat?.toString() || '0', // Using theta_hat as the score
-            theta: finishResult.theta_hat?.toString() || '0',
-            se: finishResult.se_theta?.toString() || '1',
-            completed: finishResult.completed_at // Use the actual completion time from backend
-          }
-          
-          const queryParams = new URLSearchParams(finishData).toString()
-          router.push(`/results/${attemptId}/simple?${queryParams}`)
-        } catch (finishError) {
-          console.error('Error calling finish API:', finishError)
-          setError('Failed to finish exam. Please try again.')
-        }
-      } else if (result.item) {
-        // Update with next item
-        setCurrentItem(result.item)
-        setPosition(result.position)
-      } else {
-        // No more items and we've reached the total questions
-        // This handles the case where item is null and we've completed all questions
-        const currentQuestionNumber = responses.length + 1
-        const totalQuestions = EXAM_CONFIG.TOTAL_QUESTIONS
-        
-        if (currentQuestionNumber >= totalQuestions) {
-          // Finish the exam
-          const finishResult = await apiClient.finishExam({
-            exam_attempt_id: parseInt(attemptId)
-          })
-          
-          setComplete(true)
-          stopTimer()
-          
-          // Redirect to simpleResults with finish data
-          const finishData = {
-            score: finishResult.theta_hat?.toString() || '0', // Using theta_hat as the score
-            theta: finishResult.theta_hat?.toString() || '0',
-            se: finishResult.se_theta?.toString() || '1',
-            completed: finishResult.completed_at // Use the actual completion time from backend
-          }
-          
-          const queryParams = new URLSearchParams(finishData).toString()
-          router.push(`/results/${attemptId}/simple?${queryParams}`)
-        }
-      }
+      const queryParams = new URLSearchParams(finishData).toString()
+      router.push(`/results/${latestState.attemptId}/simple?${queryParams}`)
     } catch (err) {
       setError(handleApiError(err))
     } finally {
-      setIsSubmitting(false)
+      setIsFinishing(false)
+    }
+  }, [dispatch, isFinishing, router])
+
+  useEffect(() => {
+    if (!timer.isRunning || timer.timeRemaining > 0) {
+      return
+    }
+
+    const handleTimeUp = async () => {
+      setTimerState((prev) => ({ ...prev, isRunning: false }))
+      const state = examStateRef.current
+      if (state.answeredQueue.length > 0) {
+        const remainingInventory =
+          (state.currentQuestion ? 1 : 0) + state.questionQueue.length
+        await flushAnswers(true, {
+          answers: state.answeredQueue,
+          remainingInventory,
+        })
+      }
+      await finishExamFlow()
+    }
+
+    void handleTimeUp()
+  }, [timer.isRunning, timer.timeRemaining, flushAnswers, finishExamFlow])
+
+  useEffect(() => {
+    if (isComplete || isFinishing || isFlushing || autoFinishTriggeredRef.current) {
+      return
+    }
+
+    if (
+      stopFlag &&
+      !currentQuestion &&
+      questionQueueLength === 0 &&
+      answeredQueueLength === 0
+    ) {
+      autoFinishTriggeredRef.current = true
+      void finishExamFlow()
+    }
+  }, [
+    answeredQueueLength,
+    currentQuestion,
+    finishExamFlow,
+    isComplete,
+    isFinishing,
+    isFlushing,
+    questionQueueLength,
+    stopFlag,
+  ])
+
+  const handleAnswerSubmit = async (selectedOption: number, responseTimeMs: number) => {
+    const state = examStateRef.current
+    const activeQuestion = state.currentQuestion
+    if (!activeQuestion || isAnswering || isFinishing) {
+      return
+    }
+
+    setIsAnswering(true)
+    setError(null)
+
+    try {
+      const servedAt = new Date(Date.now() - responseTimeMs).toISOString()
+      const answeredAt = new Date().toISOString()
+
+      const answer: BatchAnswerItem = {
+        item_id: activeQuestion.id,
+        selected_option: selectedOption,
+        response_time_ms: responseTimeMs,
+        served_at: servedAt,
+        answered_at: answeredAt,
+      }
+
+      const updatedAnsweredQueue = [...state.answeredQueue, answer]
+      const nextQueue = [...state.questionQueue]
+      const nextCurrent = nextQueue.shift() ?? null
+      const remainingInventory = (nextCurrent ? 1 : 0) + nextQueue.length
+
+      dispatch({ type: 'record_answer', payload: answer })
+
+      const needsForcedFlush =
+        state.stop || nextQueue.length === 0 || remainingInventory <= 3
+
+      const answersCountAfter = state.position + 1
+      const nextCurrentPosition = nextCurrent?.position ?? 0
+      const queueMaxPosition =
+        nextQueue.length > 0
+          ? Math.max(...nextQueue.map((item) => item.position ?? 0))
+          : 0
+      const currentPosition = Math.max(
+        answersCountAfter,
+        nextCurrentPosition,
+        queueMaxPosition
+      )
+      const flushContext = {
+        answers: updatedAnsweredQueue,
+        remainingInventory,
+        currentPosition,
+      }
+
+      if (isFlushing) {
+        const pendingForce = pendingFlushRef.current?.force ?? false
+        pendingFlushRef.current = { force: pendingForce || needsForcedFlush }
+      } else if (needsForcedFlush) {
+        void flushAnswers(true, flushContext)
+      } else {
+        void flushAnswers(false, flushContext)
+      }
+    } finally {
+      setIsAnswering(false)
     }
   }
 
+  const isLastQuestion = useMemo(() => {
+    return Boolean(currentQuestion && stopFlag && questionQueueLength === 0)
+  }, [currentQuestion, stopFlag, questionQueueLength])
 
   if (isComplete) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-4xl font-bold text-[#1c90a6] mb-4">Exam Complete!</h1>
-          {/* Removed redirecting helper text per requirement */}
-          <Button 
-            onClick={() => router.push('/dashboard')}
-            className="px-8 py-3 text-lg"
-          >
+          <Button onClick={() => router.push('/dashboard')} className="px-8 py-3 text-lg">
             Back to dashboard
           </Button>
         </div>
@@ -202,15 +456,13 @@ export function ExamClient({ attemptId, initialData }: ExamClientProps) {
 
   return (
     <div className="min-h-screen bg-gray-50 relative">
-      {/* Timer - Sticky position in top-right */}
       <div className="sticky top-4 z-40 flex justify-end">
-          <ExamHeaderTimer 
-          timeRemaining={timer.timeRemaining} 
+        <ExamHeaderTimer
+          timeRemaining={timer.timeRemaining}
           totalSeconds={EXAM_CONFIG.DURATION_SECONDS}
         />
       </div>
 
-      {/* Error Display - Minimal */}
       {error && (
         <div className="fixed top-4 left-4 right-4 z-10 bg-red-50 border border-red-200 rounded-lg p-3">
           <div className="flex items-center space-x-2 text-red-700">
@@ -220,16 +472,21 @@ export function ExamClient({ attemptId, initialData }: ExamClientProps) {
         </div>
       )}
 
-      {/* Question - Full Screen */}
       <div className="w-full h-screen px-8 py-8">
-        {currentItem && (
+        {currentQuestion ? (
           <QuestionCard
-            item={currentItem}
+            item={currentQuestion}
             onSubmit={handleAnswerSubmit}
-            isLoading={isSubmitting}
-            questionNumber={responses.length + 1}
-            isLastQuestion={responses.length >= EXAM_CONFIG.TOTAL_QUESTIONS - 1} // Consider last question as potential last
+            isLoading={isInteractionLocked}
+            questionNumber={currentQuestion.position ?? position + 1}
+            isLastQuestion={isLastQuestion}
           />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <p className="text-slate-600 text-lg">
+              {isFlushing ? 'Loading next set of questions...' : 'Processing responses...'}
+            </p>
+          </div>
         )}
       </div>
     </div>

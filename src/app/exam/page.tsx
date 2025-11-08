@@ -7,15 +7,12 @@ import { Button } from '@/components/ui/Button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card'
 import { User, AlertCircle } from 'lucide-react'
 import { apiClient, handleApiError } from '@/lib/api'
-import { useExamStore } from '@/lib/store/exam'
 import { useAuth } from '@/contexts/AuthContext'
-import { EXAM_DURATION_HOURS } from '@/lib/types'
 
 export default function ExamEntryPage() {
   const router = useRouter()
   const [isStarting, setIsStarting] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const resetExam = useExamStore((state) => state.resetExam)
   const { user, isAuthenticated, isLoading } = useAuth()
 
   // Show loading state while checking authentication
@@ -71,13 +68,8 @@ export default function ExamEntryPage() {
     setError(null)
 
     try {
-      // Reset any previous exam state
-      resetExam()
-      
       // Start new exam
-      const examResponse = await apiClient.startExam()
-
-      // Navigate to exam interface with the start data
+      const examResponse = await apiClient.startExamBatch({ batchSize: 6, thetaTarget: 0 })
       router.push(`/exam/${examResponse.exam_attempt_id}?data=${encodeURIComponent(JSON.stringify(examResponse))}`)
     } catch (err) {
       setError(handleApiError(err))

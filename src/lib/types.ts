@@ -22,6 +22,11 @@ export const ItemPublicSchema = z.object({
   active_flag: z.boolean(),
   is_scored: z.boolean(),
   created_at: z.string(), // ISO datetime string
+  correct_option: z.number().optional(),
+  a: z.number().optional(),
+  b: z.number().optional(),
+  c: z.number().optional(),
+  position: z.number().optional(),
 })
 
 export const ExamStartResponseSchema = z.object({
@@ -30,6 +35,15 @@ export const ExamStartResponseSchema = z.object({
   item: ItemPublicSchema,
   pilot_start_pos: z.number(),
   learning_rate: z.number(),
+})
+
+export const ExamStartBatchResponseSchema = z.object({
+  exam_attempt_id: z.number(),
+  pilot_start_pos: z.number(),
+  theta: z.number(),
+  se_theta: z.number(),
+  learning_rate: z.number(),
+  question_inventory: z.array(ItemPublicSchema),
 })
 
 export const ExamStateResponseSchema = z.object({
@@ -48,6 +62,7 @@ export const ExamStateResponseSchema = z.object({
 export type ExamStartRequest = z.infer<typeof ExamStartRequestSchema>
 export type ItemPublic = z.infer<typeof ItemPublicSchema>
 export type ExamStartResponse = z.infer<typeof ExamStartResponseSchema>
+export type ExamStartBatchResponse = z.infer<typeof ExamStartBatchResponseSchema>
 export type ExamStateResponse = z.infer<typeof ExamStateResponseSchema>
 
 // Answer Types - Updated to match backend schemas
@@ -74,8 +89,40 @@ export const AnswerSubmitResponseSchema = z.object({
   category_served_counts: z.record(z.number()).optional(),
 })
 
+export const BatchAnswerItemSchema = z.object({
+  item_id: z.number(),
+  selected_option: z.number().min(1).max(5),
+  response_time_ms: z.number().optional(),
+  served_at: z.string().optional(),
+  answered_at: z.string().optional(),
+  idempotency_key: z.string().optional(),
+})
+
+export const AnswerBatchRequestSchema = z.object({
+  exam_attempt_id: z.number(),
+  answers: z.array(BatchAnswerItemSchema),
+  batch_size: z.number(),
+  learning_rate: z.number().optional(),
+  current_position: z.number().optional(),
+})
+
+export const AnswerBatchResponseSchema = z.object({
+  exam_attempt_id: z.number(),
+  position: z.number(),
+  theta: z.number(),
+  se: z.number(),
+  learning_rate: z.number(),
+  stop: z.boolean(),
+  question_inventory: z.array(ItemPublicSchema),
+  thetas_by_category: z.record(z.number()).optional(),
+  category_served_counts: z.record(z.number()).optional(),
+})
+
 export type AnswerSubmitRequest = z.infer<typeof AnswerSubmitRequestSchema>
 export type AnswerSubmitResponse = z.infer<typeof AnswerSubmitResponseSchema>
+export type BatchAnswerItem = z.infer<typeof BatchAnswerItemSchema>
+export type AnswerBatchRequest = z.infer<typeof AnswerBatchRequestSchema>
+export type AnswerBatchResponse = z.infer<typeof AnswerBatchResponseSchema>
 
 // Finish Exam Types
 export const FinishRequestSchema = z.object({
@@ -173,11 +220,17 @@ export type ApiError = z.infer<typeof ApiErrorSchema>
 // UI State Types
 export interface ExamState {
   attemptId: number | null
-  currentItem: ItemPublic | null
-  position: number | null
-  responses: AnswerSubmitRequest[]
+  pilotStart: number | null
+  theta: number | null
+  se: number | null
+  learningRate: number
+  position: number
+  questionQueue: ItemPublic[]
+  answeredQueue: BatchAnswerItem[]
+  currentQuestion: ItemPublic | null
   isComplete: boolean
   isLoading: boolean
+  stop: boolean
   error: string | null
 }
 

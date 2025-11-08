@@ -4,12 +4,18 @@ import {
   ExamStartRequestSchema,
   ExamStartResponse,
   ExamStartResponseSchema,
+  ExamStartBatchResponse,
+  ExamStartBatchResponseSchema,
   ExamStateResponse,
   ExamStateResponseSchema,
   AnswerSubmitRequest,
   AnswerSubmitRequestSchema,
   AnswerSubmitResponse,
   AnswerSubmitResponseSchema,
+  AnswerBatchRequest,
+  AnswerBatchRequestSchema,
+  AnswerBatchResponse,
+  AnswerBatchResponseSchema,
   FinishRequest,
   FinishRequestSchema,
   FinishResponse,
@@ -35,6 +41,13 @@ class ApiClient {
         'Content-Type': 'application/json',
       },
     })
+
+    if (process.env.NODE_ENV !== 'production') {
+      const baseUrl = this.client.defaults.baseURL
+      const origin = typeof window === 'undefined' ? '[server]' : '[browser]'
+      // eslint-disable-next-line no-console
+      console.log(`${origin} Using API base: ${baseUrl}`)
+    }
 
     // Add request interceptor to include auth token
     this.client.interceptors.request.use((config) => {
@@ -95,11 +108,26 @@ class ApiClient {
     return ExamStartResponseSchema.parse(response.data)
   }
 
+  async startExamBatch(options?: { batchSize?: number; thetaTarget?: number }): Promise<ExamStartBatchResponse> {
+    const body = {
+      batch_size: options?.batchSize ?? 6,
+      theta_target: options?.thetaTarget ?? 0,
+    }
+    const response = await this.client.post('/api/v1/exam/start-batch', body)
+    return ExamStartBatchResponseSchema.parse(response.data)
+  }
+
   async submitAnswer(answer: AnswerSubmitRequest): Promise<AnswerSubmitResponse> {
     const validatedAnswer = AnswerSubmitRequestSchema.parse(answer)
     const response = await this.client.post('/api/v1/exam/answer', validatedAnswer)
     
     return AnswerSubmitResponseSchema.parse(response.data)
+  }
+
+  async submitAnswerBatch(payload: AnswerBatchRequest): Promise<AnswerBatchResponse> {
+    const validatedPayload = AnswerBatchRequestSchema.parse(payload)
+    const response = await this.client.post('/api/v1/exam/answer-batch', validatedPayload)
+    return AnswerBatchResponseSchema.parse(response.data)
   }
 
   async finishExam(finishRequest: FinishRequest): Promise<FinishResponse> {
@@ -213,6 +241,9 @@ export type {
   ExamStartResponse, 
   AnswerSubmitRequest, 
   AnswerSubmitResponse, 
+  AnswerBatchRequest,
+  AnswerBatchResponse,
+  ExamStartBatchResponse,
   ExamResults, 
   UserAttemptsResponse, 
   UserAttemptSummary, 
