@@ -27,6 +27,14 @@ export const ItemPublicSchema = z.object({
   b: z.number().optional(),
   c: z.number().optional(),
   position: z.number().optional(),
+  media: z
+    .array(
+      z.object({
+        storage_key: z.string(),
+        display_order: z.number(),
+      })
+    )
+    .optional(),
 })
 
 export const ExamStartResponseSchema = z.object({

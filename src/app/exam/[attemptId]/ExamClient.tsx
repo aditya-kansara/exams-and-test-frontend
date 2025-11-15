@@ -9,6 +9,14 @@ import { apiClient, handleApiError } from '@/lib/api'
 import { QuestionCard } from './components/QuestionCard'
 import { ExamHeaderTimer } from './components/ExamHeaderTimer'
 import { Button } from '@/components/ui/Button'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/Dialog'
 
 interface ExamClientProps {
   attemptId: string
@@ -159,12 +167,16 @@ const examReducer = (state: ExamSessionState, action: ExamAction): ExamSessionSt
 type TimerState = {
   timeRemaining: number
   isRunning: boolean
+  isPaused: boolean
 }
 
 const initialTimerState: TimerState = {
   timeRemaining: EXAM_CONFIG.DURATION_SECONDS,
   isRunning: false,
+  isPaused: false,
 }
+
+const MAX_VIOLATIONS = 3
 
 export function ExamClient({ attemptId: _attemptId, initialData }: ExamClientProps) {
   const router = useRouter()
@@ -180,6 +192,17 @@ export function ExamClient({ attemptId: _attemptId, initialData }: ExamClientPro
   const [isAnswering, setIsAnswering] = useState(false)
   const [isFlushing, setIsFlushing] = useState(false)
   const [isFinishing, setIsFinishing] = useState(false)
+  const [violationCount, setViolationCount] = useState(0)
+  const [showWarningModal, setShowWarningModal] = useState(false)
+  const [warningType, setWarningType] = useState<'tab' | 'fullscreen' | null>(null)
+  const [isTabFocused, setIsTabFocused] = useState(true)
+  const [showFullscreenDialog, setShowFullscreenDialog] = useState(false)
+  const tabBlurTimeRef = useRef<number | null>(null)
+  const isHandlingViolationRef = useRef(false)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const warningTypeRef = useRef<'tab' | 'fullscreen' | null>(null)
+  const violationCountRef = useRef(0)
+  const fullscreenEnteredOnceRef = useRef(false) // Track if fullscreen was successfully entered at least once
 
   const isInteractionLocked = isAnswering || isFinishing
   const { currentQuestion, questionQueue, answeredQueue, stop: stopFlag, position, isComplete } =
@@ -190,6 +213,7 @@ export function ExamClient({ attemptId: _attemptId, initialData }: ExamClientPro
   const initializedAttemptRef = useRef<number | null>(null)
   const autoFinishTriggeredRef = useRef(false)
   const pendingFlushRef = useRef<{ force: boolean }>({ force: false })
+  const finishExamFlowRef = useRef<(() => Promise<void>) | null>(null)
 
   useEffect(() => {
     if (initializedAttemptRef.current === initialData.exam_attempt_id) {
@@ -197,25 +221,382 @@ export function ExamClient({ attemptId: _attemptId, initialData }: ExamClientPro
     }
     initializedAttemptRef.current = initialData.exam_attempt_id
     dispatch({ type: 'initialize', payload: initialData })
-    setTimerState({ timeRemaining: EXAM_CONFIG.DURATION_SECONDS, isRunning: true })
+    
+    // Start timer immediately
+    const durationSeconds = EXAM_CONFIG.DURATION_SECONDS
+    console.log('Initializing exam timer:', { durationSeconds, durationHours: durationSeconds / 3600 })
+    setTimerState({ timeRemaining: durationSeconds, isRunning: true, isPaused: false })
+    
     autoFinishTriggeredRef.current = false
+    setViolationCount(0)
+    violationCountRef.current = 0
+    setShowWarningModal(false)
+    setWarningType(null)
+    warningTypeRef.current = null
+    setIsTabFocused(true)
+    tabBlurTimeRef.current = null
+    isHandlingViolationRef.current = false
+    fullscreenEnteredOnceRef.current = false
+    
+    // Show fullscreen dialog first, then request fullscreen after user confirms
+    // Small delay to ensure DOM is ready
+    setTimeout(() => {
+      setShowFullscreenDialog(true)
+    }, 100)
+    
+    // Also try to request fullscreen when window becomes visible/focused
+    const handleWindowFocus = async () => {
+      const isCurrentlyFullscreen = !!(
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).mozFullScreenElement ||
+        (document as any).msFullscreenElement
+      )
+      
+      // Only try to request fullscreen if exam is running and not already in fullscreen
+      if (!isCurrentlyFullscreen && !document.hidden && document.hasFocus() && timer.isRunning) {
+        try {
+          if (document.documentElement.requestFullscreen) {
+            await document.documentElement.requestFullscreen()
+            setIsFullscreen(true)
+            fullscreenEnteredOnceRef.current = true
+          } else if ((document.documentElement as any).webkitRequestFullscreen) {
+            await (document.documentElement as any).webkitRequestFullscreen()
+            setIsFullscreen(true)
+            fullscreenEnteredOnceRef.current = true
+          } else if ((document.documentElement as any).mozRequestFullScreen) {
+            await (document.documentElement as any).mozRequestFullScreen()
+            setIsFullscreen(true)
+            fullscreenEnteredOnceRef.current = true
+          } else if ((document.documentElement as any).msRequestFullscreen) {
+            await (document.documentElement as any).msRequestFullscreen()
+            setIsFullscreen(true)
+            fullscreenEnteredOnceRef.current = true
+          }
+        } catch (error) {
+          // Silently fail - don't show warning on focus if fullscreen wasn't entered yet
+          // Only warn if user exits after successfully entering fullscreen
+        }
+      }
+    }
+    
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        void handleWindowFocus()
+      }
+    }
+    
+    window.addEventListener('focus', handleWindowFocus)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    
+    return () => {
+      window.removeEventListener('focus', handleWindowFocus)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialData])
+  }, [initialData, isFullscreen])
 
+  // Security measures: prevent right-click, copy/paste, text selection, image interactions
   useEffect(() => {
-    if (!timer.isRunning) {
+    // Prevent right-click context menu
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault()
+      return false
+    }
+
+    // Prevent copy, cut, paste
+    const handleCopy = (e: ClipboardEvent) => {
+      e.preventDefault()
+      return false
+    }
+
+    const handleCut = (e: ClipboardEvent) => {
+      e.preventDefault()
+      return false
+    }
+
+    const handlePaste = (e: ClipboardEvent) => {
+      e.preventDefault()
+      return false
+    }
+
+    // Prevent keyboard shortcuts (Ctrl+C, Ctrl+V, Ctrl+A)
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && (e.key === 'c' || e.key === 'v' || e.key === 'a' || e.key === 'C' || e.key === 'V' || e.key === 'A')) {
+        e.preventDefault()
+        return false
+      }
+      // Also prevent Ctrl+X (cut), Ctrl+S (save), Ctrl+P (print)
+      if (e.ctrlKey && (e.key === 'x' || e.key === 'X' || e.key === 's' || e.key === 'S' || e.key === 'p' || e.key === 'P')) {
+        e.preventDefault()
+        return false
+      }
+    }
+
+    // Prevent text selection
+    const handleSelectStart = (e: Event) => {
+      e.preventDefault()
+      return false
+    }
+
+    // Prevent drag and drop
+    const handleDragStart = (e: DragEvent) => {
+      e.preventDefault()
+      return false
+    }
+
+    document.addEventListener('contextmenu', handleContextMenu)
+    document.addEventListener('copy', handleCopy)
+    document.addEventListener('cut', handleCut)
+    document.addEventListener('paste', handlePaste)
+    document.addEventListener('keydown', handleKeyDown)
+    document.addEventListener('selectstart', handleSelectStart)
+    document.addEventListener('dragstart', handleDragStart)
+
+    // Add CSS to prevent text selection and image interactions
+    const style = document.createElement('style')
+    style.textContent = `
+      * {
+        -webkit-user-select: none !important;
+        -moz-user-select: none !important;
+        -ms-user-select: none !important;
+        user-select: none !important;
+        -webkit-touch-callout: none !important;
+      }
+      img {
+        -webkit-user-drag: none !important;
+        user-drag: none !important;
+        pointer-events: none !important;
+      }
+      input, textarea {
+        -webkit-user-select: text !important;
+        -moz-user-select: text !important;
+        -ms-user-select: text !important;
+        user-select: text !important;
+      }
+    `
+    document.head.appendChild(style)
+
+    return () => {
+      document.removeEventListener('contextmenu', handleContextMenu)
+      document.removeEventListener('copy', handleCopy)
+      document.removeEventListener('cut', handleCut)
+      document.removeEventListener('paste', handlePaste)
+      document.removeEventListener('keydown', handleKeyDown)
+      document.removeEventListener('selectstart', handleSelectStart)
+      document.removeEventListener('dragstart', handleDragStart)
+      document.head.removeChild(style)
+    }
+  }, [])
+
+  // Fullscreen detection - check periodically and on events
+  useEffect(() => {
+    if (isComplete || isFinishing) {
       return
     }
+
+    const checkFullscreen = () => {
+      const isCurrentlyFullscreen = !!(
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).mozFullScreenElement ||
+        (document as any).msFullscreenElement
+      )
+
+      setIsFullscreen(isCurrentlyFullscreen)
+
+      // Only show warning if fullscreen was successfully entered at least once, then user exited
+      if (!isCurrentlyFullscreen && timer.isRunning && !isComplete && !isFinishing) {
+        // Only trigger violation if:
+        // 1. Fullscreen was entered at least once (user successfully entered, then exited)
+        // 2. We're not already handling a violation
+        if (fullscreenEnteredOnceRef.current && isHandlingViolationRef.current === false && timer.isRunning) {
+          isHandlingViolationRef.current = true
+          setViolationCount((prev) => {
+            const newCount = prev + 1
+            violationCountRef.current = newCount
+            if (newCount >= MAX_VIOLATIONS) {
+              // End exam immediately after 3 violations
+              setTimerState((prev) => ({ ...prev, isRunning: false, isPaused: false }))
+              const finishFn = finishExamFlowRef.current
+              if (finishFn) {
+                void finishFn()
+              }
+              isHandlingViolationRef.current = false
+              return newCount
+            }
+            // Show warning modal
+            setWarningType('fullscreen')
+            warningTypeRef.current = 'fullscreen'
+            setShowWarningModal(true)
+            isHandlingViolationRef.current = false
+            return newCount
+          })
+        }
+      } else if (isCurrentlyFullscreen) {
+        // User is in fullscreen - mark that fullscreen was successfully entered
+        fullscreenEnteredOnceRef.current = true
+        isHandlingViolationRef.current = false
+        // Close warning modal if it was a fullscreen violation
+        if (warningTypeRef.current === 'fullscreen' && violationCountRef.current < MAX_VIOLATIONS) {
+          setShowWarningModal(false)
+        }
+      }
+    }
+
+    const handleFullscreenChange = () => {
+      checkFullscreen()
+    }
+
+    // Check immediately
+    checkFullscreen()
+
+    // Check periodically (every 2 seconds) to catch cases where events don't fire
+    const checkInterval = setInterval(() => {
+      if (timer.isRunning && !isComplete && !isFinishing) {
+        checkFullscreen()
+      }
+    }, 2000)
+
+    // Listen for fullscreen changes
+    document.addEventListener('fullscreenchange', handleFullscreenChange)
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange)
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange)
+    document.addEventListener('MSFullscreenChange', handleFullscreenChange)
+
+    return () => {
+      clearInterval(checkInterval)
+      document.removeEventListener('fullscreenchange', handleFullscreenChange)
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange)
+      document.removeEventListener('mozfullscreenchange', handleFullscreenChange)
+      document.removeEventListener('MSFullscreenChange', handleFullscreenChange)
+    }
+  }, [isComplete, isFinishing, timer.isRunning])
+
+  // Tab focus detection
+  useEffect(() => {
+    if (isComplete || isFinishing) {
+      return
+    }
+
+    const handleTabBlur = () => {
+      // Prevent double-counting violations
+      if (isHandlingViolationRef.current) {
+        return
+      }
+
+      const currentTimer = timer
+
+      // Only trigger if exam is running and not already paused
+      if (currentTimer.isRunning && !currentTimer.isPaused) {
+        isHandlingViolationRef.current = true
+        setIsTabFocused(false)
+        tabBlurTimeRef.current = Date.now()
+        
+        // Pause the timer
+        setTimerState((prev) => ({ ...prev, isPaused: true }))
+        
+        // Increment violation count
+        setViolationCount((prev) => {
+          const newCount = prev + 1
+          if (newCount >= MAX_VIOLATIONS) {
+            // End exam immediately after 3 violations
+            setTimerState((prev) => ({ ...prev, isRunning: false, isPaused: false }))
+            const finishFn = finishExamFlowRef.current
+            if (finishFn) {
+              void finishFn()
+            }
+            isHandlingViolationRef.current = false
+            return newCount
+          }
+          // Show warning modal
+          setWarningType('tab')
+          warningTypeRef.current = 'tab'
+          setShowWarningModal(true)
+          isHandlingViolationRef.current = false
+          violationCountRef.current = newCount
+          return newCount
+        })
+      }
+    }
+
+    const handleTabFocus = () => {
+      if (!isTabFocused && timer.isPaused) {
+        setIsTabFocused(true)
+        tabBlurTimeRef.current = null
+        isHandlingViolationRef.current = false
+        
+        if (violationCountRef.current < MAX_VIOLATIONS) {
+          setTimerState((prev) => ({ ...prev, isPaused: false }))
+          // Only close warning if it's a tab violation and user returned to tab
+          if (warningTypeRef.current === 'tab') {
+            setShowWarningModal(false)
+          }
+        }
+      }
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        // Tab lost focus (switched tabs or minimized window)
+        handleTabBlur()
+      } else {
+        // Tab regained focus
+        handleTabFocus()
+      }
+    }
+
+    const handleBlur = () => {
+      // Window blur (switched to another app, but tab might still be visible)
+      // Only trigger if document is not hidden (to avoid double-triggering with visibilitychange)
+      if (!document.hidden) {
+        handleTabBlur()
+      }
+    }
+
+    const handleFocus = () => {
+      // Window focus (returned to the app)
+      if (!document.hidden) {
+        handleTabFocus()
+      }
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('blur', handleBlur)
+    window.addEventListener('focus', handleFocus)
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('blur', handleBlur)
+      window.removeEventListener('focus', handleFocus)
+    }
+  }, [isTabFocused, timer.isRunning, timer.isPaused, violationCount, isComplete, isFinishing])
+
+  useEffect(() => {
+    if (!timer.isRunning || timer.isPaused) {
+      console.log('Timer not running or paused:', { isRunning: timer.isRunning, isPaused: timer.isPaused, timeRemaining: timer.timeRemaining })
+      return
+    }
+    
+    console.log('Timer started:', { timeRemaining: timer.timeRemaining, isRunning: timer.isRunning, isPaused: timer.isPaused })
+    
     const interval = setInterval(() => {
       setTimerState((prev) => {
-        if (!prev.isRunning || prev.timeRemaining <= 0) {
+        if (!prev.isRunning || prev.isPaused || prev.timeRemaining <= 0) {
+          if (prev.timeRemaining <= 0) {
+            console.log('Timer reached zero')
+          }
           return prev
         }
         return { ...prev, timeRemaining: prev.timeRemaining - 1 }
       })
     }, 1000)
-    return () => clearInterval(interval)
-  }, [timer.isRunning])
+    
+    return () => {
+      console.log('Timer interval cleared')
+      clearInterval(interval)
+    }
+  }, [timer.isRunning, timer.isPaused])
 
   const flushAnswers = useCallback(
     async (
@@ -327,6 +708,20 @@ export function ExamClient({ attemptId: _attemptId, initialData }: ExamClientPro
       setIsFinishing(false)
     }
   }, [dispatch, isFinishing, router])
+
+  // Keep ref updated with latest finishExamFlow
+  useEffect(() => {
+    finishExamFlowRef.current = finishExamFlow
+  }, [finishExamFlow])
+
+  // Keep refs in sync with state
+  useEffect(() => {
+    violationCountRef.current = violationCount
+  }, [violationCount])
+
+  useEffect(() => {
+    warningTypeRef.current = warningType
+  }, [warningType])
 
   useEffect(() => {
     if (!timer.isRunning || timer.timeRemaining > 0) {
@@ -472,12 +867,205 @@ export function ExamClient({ attemptId: _attemptId, initialData }: ExamClientPro
         </div>
       )}
 
+      {/* Fullscreen Consent Dialog */}
+      <Dialog 
+        open={showFullscreenDialog} 
+        onOpenChange={() => {}} // Prevent closing without user action
+      >
+        <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-[#1c90a6]">
+              Fullscreen Required
+            </DialogTitle>
+            <DialogDescription className="pt-2">
+              This exam must be taken in fullscreen mode. Please enter fullscreen to continue.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowFullscreenDialog(false)
+                // Redirect back to exam page if user declines
+                router.push('/exam')
+              }}
+              className="flex-1"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={async () => {
+                setShowFullscreenDialog(false)
+                // Request fullscreen after user confirms
+                try {
+                  let fullscreenPromise: Promise<void> | null = null
+                  
+                  if (document.documentElement.requestFullscreen) {
+                    fullscreenPromise = document.documentElement.requestFullscreen() as Promise<void>
+                  } else if ((document.documentElement as any).webkitRequestFullscreen) {
+                    fullscreenPromise = (document.documentElement as any).webkitRequestFullscreen()
+                  } else if ((document.documentElement as any).mozRequestFullScreen) {
+                    fullscreenPromise = (document.documentElement as any).mozRequestFullScreen()
+                  } else if ((document.documentElement as any).msRequestFullscreen) {
+                    fullscreenPromise = (document.documentElement as any).msRequestFullscreen()
+                  }
+                  
+                  if (fullscreenPromise) {
+                    await fullscreenPromise
+                    setIsFullscreen(true)
+                    fullscreenEnteredOnceRef.current = true
+                    console.log('Fullscreen entered successfully after user consent')
+                  } else {
+                    console.warn('Fullscreen API not available in this browser')
+                    // Continue anyway - browser doesn't support fullscreen
+                    fullscreenEnteredOnceRef.current = true
+                  }
+                } catch (error: any) {
+                  console.error('Error requesting fullscreen:', error)
+                  // If user denies, show warning but continue
+                  if (error.name === 'NotAllowedError') {
+                    setWarningType('fullscreen')
+                    warningTypeRef.current = 'fullscreen'
+                    setViolationCount((prev) => {
+                      const newCount = prev + 1
+                      violationCountRef.current = newCount
+                      setShowWarningModal(true)
+                      return newCount
+                    })
+                  }
+                }
+              }}
+              className="flex-1"
+            >
+              Enter Fullscreen
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Unified Warning Modal for All Violations */}
+      <Dialog 
+        open={showWarningModal} 
+        onOpenChange={(open) => {
+          // Only allow closing if user has fixed the violation
+          if (!open) {
+            if (warningType === 'tab' && isTabFocused && violationCount < MAX_VIOLATIONS) {
+              setShowWarningModal(false)
+            } else if (warningType === 'fullscreen' && isFullscreen && violationCount < MAX_VIOLATIONS) {
+              setShowWarningModal(false)
+            }
+            // Otherwise, prevent closing
+          }
+        }}
+      >
+        <DialogContent 
+          className="sm:max-w-md" 
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertCircle className="h-5 w-5" />
+              {warningType === 'fullscreen' ? 'Fullscreen Required' : 'Warning: Exam Violation'}
+            </DialogTitle>
+            <DialogDescription className="pt-2">
+              {warningType === 'fullscreen'
+                ? 'The exam must be taken in fullscreen mode. Please return to fullscreen to continue.'
+                : 'You have switched away from the exam tab or window. This is a violation of exam rules.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <p className="text-sm text-amber-800 font-medium mb-2">
+                Total Violations: {violationCount} / {MAX_VIOLATIONS}
+              </p>
+              <p className="text-sm text-amber-700">
+                {violationCount >= MAX_VIOLATIONS - 1
+                  ? '⚠️ This is your final warning. One more violation (tab switch or fullscreen exit) will result in the exam being terminated.'
+                  : 'Please keep the exam tab focused and remain in fullscreen mode at all times. The exam will be automatically terminated after 3 total violations.'}
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            {warningType === 'fullscreen' ? (
+              <Button
+                onClick={async () => {
+                  try {
+                    if (document.documentElement.requestFullscreen) {
+                      await document.documentElement.requestFullscreen()
+                    } else if ((document.documentElement as any).webkitRequestFullscreen) {
+                      await (document.documentElement as any).webkitRequestFullscreen()
+                    } else if ((document.documentElement as any).mozRequestFullScreen) {
+                      await (document.documentElement as any).mozRequestFullScreen()
+                    } else if ((document.documentElement as any).msRequestFullscreen) {
+                      await (document.documentElement as any).msRequestFullscreen()
+                    }
+                    if (violationCount < MAX_VIOLATIONS) {
+                      setShowWarningModal(false)
+                    }
+                  } catch (error) {
+                    console.error('Error requesting fullscreen:', error)
+                    alert('Unable to enter fullscreen. Please press F11 or use your browser\'s fullscreen option.')
+                  }
+                }}
+                className="w-full"
+              >
+                Return to Fullscreen
+              </Button>
+            ) : (
+              <div className="w-full text-center text-sm text-slate-600">
+                Please return to the exam tab to continue.
+              </div>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Exam Terminated Modal */}
+      {violationCount >= MAX_VIOLATIONS && !isComplete && (
+        <Dialog open={true} onOpenChange={() => {}}>
+          <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-red-600">
+                <AlertCircle className="h-5 w-5" />
+                Exam Terminated
+              </DialogTitle>
+              <DialogDescription className="pt-2">
+                Your exam has been terminated due to multiple violations (tab switches or fullscreen exits).
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <p className="text-sm text-red-800 font-medium mb-2">
+                  Total Violations: {violationCount}
+                </p>
+                <p className="text-sm text-red-700">
+                  You exceeded the maximum allowed violations ({MAX_VIOLATIONS}). The exam has been automatically ended.
+                </p>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                onClick={() => {
+                  if (isFinishing || isComplete) {
+                    router.push('/dashboard')
+                  }
+                }}
+                className="w-full"
+              >
+                {isFinishing ? 'Processing...' : 'Return to Dashboard'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
       <div className="w-full h-screen px-8 py-8">
         {currentQuestion ? (
           <QuestionCard
             item={currentQuestion}
             onSubmit={handleAnswerSubmit}
-            isLoading={isInteractionLocked}
+            isLoading={isInteractionLocked || timer.isPaused}
             questionNumber={currentQuestion.position ?? position + 1}
             isLastQuestion={isLastQuestion}
           />

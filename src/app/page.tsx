@@ -12,7 +12,6 @@ import Image from 'next/image'
 export default function ExamsAndTestLanding() {
   const router = useRouter()
   const [scrolled, setScrolled] = useState(false)
-  const [showContact, setShowContact] = useState(false)
   const [showCareers, setShowCareers] = useState(false)
   const [showAuthModal, setShowAuthModal] = useState(false)
   const { user, isAuthenticated, isLoading, signOut } = useAuth()
@@ -322,12 +321,12 @@ export default function ExamsAndTestLanding() {
               Pilot with your syllabus and integrations—we'll help you get live fast.
             </p>
             <div className="mt-6">
-              <button
-                onClick={() => setShowContact(true)}
+              <Link
+                href="/contact"
                 className="btn-dark inline-flex items-center gap-2"
               >
                 Contact us
-              </button>
+              </Link>
             </div>
           </div>
         </div>
@@ -338,19 +337,17 @@ export default function ExamsAndTestLanding() {
         <div className="mx-auto max-w-6xl px-4 py-6 text-sm text-slate-500 dark:text-slate-400 flex items-center justify-between">
           <p>© {new Date().getFullYear()} Exams And Test</p>
           <nav className="flex gap-4">
-            <button
-              onClick={() => setShowContact(true)}
-              className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
-            >
+            <Link href="/contact" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">
               Contact us
-            </button>
+            </Link>
             <button
               onClick={() => setShowCareers(true)}
               className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
             >
               Careers
             </button>
-            <Link href="/privacy-terms" className="hover:text-slate-700 dark:hover:text-slate-200">Privacy & Terms</Link>
+            <Link href="/privacy" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Privacy Policy</Link>
+            <Link href="/terms" className="hover:text-slate-700 dark:hover:text-slate-200 transition-colors">Terms & Conditions</Link>
           </nav>
         </div>
       </footer>
@@ -362,45 +359,6 @@ export default function ExamsAndTestLanding() {
         onSuccess={handleAuthSuccess}
         provider="both"
       />
-      {showContact && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          className="fixed inset-0 z-50 grid place-items-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-300"
-          onClick={() => setShowContact(false)}
-        >
-          <div
-            className="w-full max-w-lg rounded-2xl border border-slate-200/50 bg-white/95 backdrop-blur-md p-8 shadow-2xl animate-in zoom-in-95 slide-in-from-bottom-4 duration-300"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="text-center mb-6">
-              <h5 className="text-2xl font-semibold text-slate-900 mb-2">Contact us</h5>
-              <p className="text-slate-600">
-                Tell us about your goals and we'll get back within 24 hours.
-              </p>
-            </div>
-            <div className="space-y-4 text-slate-700">
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors">
-                <div className="p-2 rounded-full bg-[#1c90a6]/10">
-                  <Mail className="h-5 w-5 text-[#1c90a6]" />
-                </div>
-                <div>
-                  <p className="text-sm text-slate-500">Email us</p>
-                  <a href="mailto:examsandtestfounder@gmail.com" className="font-medium hover:text-[#1c90a6] transition-colors">examsandtestfounder@gmail.com</a>
-                </div>
-              </div>
-            </div>
-            <div className="mt-6 flex justify-center">
-              <button
-                className="px-6 py-3 rounded-lg bg-slate-900 text-white font-medium hover:bg-slate-800 transition-colors"
-                onClick={() => setShowContact(false)}
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Careers Modal */}
       {showCareers && (

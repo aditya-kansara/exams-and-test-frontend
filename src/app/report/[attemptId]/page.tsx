@@ -63,7 +63,8 @@ export default function ReportPage() {
   useEffect(() => {
     if (isAuthenticated && !isLoading && attemptId) {
       fetchReportData()
-      setupSecurityMeasures()
+      const cleanup = setupSecurityMeasures()
+      return cleanup
     }
   }, [isAuthenticated, isLoading, attemptId])
 
@@ -86,7 +87,7 @@ export default function ReportPage() {
     }
   }, [isUnlocked, reportData])
 
-  // Security measures to prevent blur bypass
+  // Security measures to prevent blur bypass, copy/paste, text selection, image interactions
   const setupSecurityMeasures = () => {
     // Generate a random security key
     const key = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
@@ -96,6 +97,61 @@ export default function ReportPage() {
     if (typeof window !== 'undefined') {
       (window as any).__reportSecurityKey = key
     }
+    
+    // Prevent right-click context menu
+    const handleContextMenu = (e: MouseEvent) => {
+      e.preventDefault()
+      return false
+    }
+
+    // Prevent copy, cut, paste
+    const handleCopy = (e: ClipboardEvent) => {
+      e.preventDefault()
+      return false
+    }
+
+    const handleCut = (e: ClipboardEvent) => {
+      e.preventDefault()
+      return false
+    }
+
+    const handlePaste = (e: ClipboardEvent) => {
+      e.preventDefault()
+      return false
+    }
+
+    // Prevent keyboard shortcuts (Ctrl+C, Ctrl+V, Ctrl+A)
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && (e.key === 'c' || e.key === 'v' || e.key === 'a' || e.key === 'C' || e.key === 'V' || e.key === 'A')) {
+        e.preventDefault()
+        return false
+      }
+      // Also prevent Ctrl+X (cut), Ctrl+S (save), Ctrl+P (print)
+      if (e.ctrlKey && (e.key === 'x' || e.key === 'X' || e.key === 's' || e.key === 'S' || e.key === 'p' || e.key === 'P')) {
+        e.preventDefault()
+        return false
+      }
+    }
+
+    // Prevent text selection
+    const handleSelectStart = (e: Event) => {
+      e.preventDefault()
+      return false
+    }
+
+    // Prevent drag and drop
+    const handleDragStart = (e: DragEvent) => {
+      e.preventDefault()
+      return false
+    }
+
+    document.addEventListener('contextmenu', handleContextMenu)
+    document.addEventListener('copy', handleCopy)
+    document.addEventListener('cut', handleCut)
+    document.addEventListener('paste', handlePaste)
+    document.addEventListener('keydown', handleKeyDown)
+    document.addEventListener('selectstart', handleSelectStart)
+    document.addEventListener('dragstart', handleDragStart)
     
     // Monitor for DOM manipulation attempts
     const observer = new MutationObserver((mutations) => {
@@ -119,31 +175,6 @@ export default function ReportPage() {
       subtree: true,
       attributeFilter: ['class', 'style']
     })
-    
-    // Developer tools unblocked for debugging: disable previous right-click/F12 blocking
-    const enableDevToolsBlock = false
-    // Initialize with no-op handlers to satisfy strict typing
-    let handleContextMenu: (e: MouseEvent) => void = () => {}
-    let handleKeyDown: (e: KeyboardEvent) => void = () => {}
-    let devHandlersAttached = false
-    if (enableDevToolsBlock) {
-      handleContextMenu = (e: MouseEvent) => {
-        e.preventDefault()
-        return false
-      }
-      handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === 'F12' || 
-            (e.ctrlKey && e.shiftKey && e.key === 'I') ||
-            (e.ctrlKey && e.key === 'u') ||
-            (e.ctrlKey && e.key === 's')) {
-          e.preventDefault()
-          return false
-        }
-      }
-      document.addEventListener('contextmenu', handleContextMenu)
-      document.addEventListener('keydown', handleKeyDown)
-      devHandlersAttached = true
-    }
     
     // Periodic security check
     const securityInterval = setInterval(() => {
@@ -181,15 +212,16 @@ export default function ReportPage() {
       }
     }, 1000) // Check every second
     
-    // Developer tools are unblocked; do not disable console during debugging
-    
     // Cleanup function
     return () => {
       observer.disconnect()
-      if (devHandlersAttached) {
-        document.removeEventListener('contextmenu', handleContextMenu)
-        document.removeEventListener('keydown', handleKeyDown)
-      }
+      document.removeEventListener('contextmenu', handleContextMenu)
+      document.removeEventListener('copy', handleCopy)
+      document.removeEventListener('cut', handleCut)
+      document.removeEventListener('paste', handlePaste)
+      document.removeEventListener('keydown', handleKeyDown)
+      document.removeEventListener('selectstart', handleSelectStart)
+      document.removeEventListener('dragstart', handleDragStart)
       clearInterval(securityInterval)
     }
   }
@@ -248,11 +280,16 @@ export default function ReportPage() {
       
       // Load actual questions data from API
       console.log('Loading actual questions from API...')
-      const questionsResponse = await apiClient.getExamQuestions(attemptId)
-      const actualQuestions = questionsResponse.questions
-      
-      console.log('Loaded actual questions:', actualQuestions.length)
-      console.log('Questions data:', actualQuestions)
+      let actualQuestions: QuestionDetail[] = []
+      try {
+        const questionsResponse = await apiClient.getExamQuestions(attemptId)
+        actualQuestions = questionsResponse.questions || []
+        console.log('Loaded actual questions:', actualQuestions.length)
+      } catch (questionsError) {
+        console.error('Error loading questions, but report is unlocked:', questionsError)
+        // Continue with empty questions array - at least show the report summary
+        actualQuestions = []
+      }
       
       const report: ReportData = {
         ...results,
@@ -492,12 +529,40 @@ export default function ReportPage() {
   }
 
   if (!reportData) {
-    return null
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-4 border-[#1c90a6] border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-600">Loading report data...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <style jsx>{`
+      <style jsx global>{`
+        * {
+          -webkit-user-select: none !important;
+          -moz-user-select: none !important;
+          -ms-user-select: none !important;
+          user-select: none !important;
+          -webkit-touch-callout: none !important;
+        }
+        
+        img {
+          -webkit-user-drag: none !important;
+          user-drag: none !important;
+          pointer-events: none !important;
+        }
+        
+        input, textarea, button {
+          -webkit-user-select: text !important;
+          -moz-user-select: text !important;
+          -ms-user-select: text !important;
+          user-select: text !important;
+        }
+        
         .locked-content {
           filter: blur(15px) brightness(0.6) contrast(0.4) saturate(0.3);
           pointer-events: none;
@@ -520,23 +585,23 @@ export default function ReportPage() {
         .unlocked-content {
           filter: none !important;
           pointer-events: auto !important;
-          user-select: auto !important;
-          -webkit-user-select: auto !important;
-          -moz-user-select: auto !important;
-          -ms-user-select: auto !important;
-          -webkit-touch-callout: auto !important;
-          -webkit-tap-highlight-color: auto !important;
+          user-select: none !important;
+          -webkit-user-select: none !important;
+          -moz-user-select: none !important;
+          -ms-user-select: none !important;
+          -webkit-touch-callout: none !important;
+          -webkit-tap-highlight-color: transparent !important;
         }
         
         .unlocked-content * {
           filter: none !important;
           pointer-events: auto !important;
-          user-select: auto !important;
-          -webkit-user-select: auto !important;
-          -moz-user-select: auto !important;
-          -ms-user-select: auto !important;
-          -webkit-touch-callout: auto !important;
-          -webkit-tap-highlight-color: auto !important;
+          user-select: none !important;
+          -webkit-user-select: none !important;
+          -moz-user-select: none !important;
+          -ms-user-select: none !important;
+          -webkit-touch-callout: none !important;
+          -webkit-tap-highlight-color: transparent !important;
         }
         
         .security-overlay {
@@ -607,7 +672,9 @@ export default function ReportPage() {
           <div className="text-center">
             <div className="text-4xl font-bold text-[#1c90a6] mb-2">Score: {getNormalizedThetaScore(reportData.theta_hat)}</div>
             <div className="text-sm text-gray-600">
-              {reportData.items_scored} questions answered
+              {isUnlocked && reportData.questions.length > 0 
+                ? `${reportData.questions.length} questions answered`
+                : `${reportData.items_scored} questions answered`}
             </div>
           </div>
           <div className="mt-4 text-center text-sm text-gray-600">

@@ -70,7 +70,30 @@ export default function ExamEntryPage() {
     try {
       // Start new exam
       const examResponse = await apiClient.startExamBatch({ batchSize: 6, thetaTarget: 0 })
-      router.push(`/exam/${examResponse.exam_attempt_id}?data=${encodeURIComponent(JSON.stringify(examResponse))}`)
+      
+      // Check if the data is too large for URL (browsers have URL length limits ~2000-8000 chars)
+      const dataString = JSON.stringify(examResponse)
+      const encodedData = encodeURIComponent(dataString)
+      
+      console.log('Exam response data size:', {
+        original: dataString.length,
+        encoded: encodedData.length,
+        question_count: examResponse.question_inventory?.length || 0,
+      })
+      
+      // If encoded data is too large (>1500 chars to be safe), store in sessionStorage instead
+      if (encodedData.length > 1500) {
+        console.warn('Exam data is too large for URL, storing in sessionStorage')
+        const storageKey = `exam_data_${examResponse.exam_attempt_id}`
+        sessionStorage.setItem(storageKey, dataString)
+        // Store with timestamp for cleanup
+        sessionStorage.setItem(`${storageKey}_timestamp`, Date.now().toString())
+        // Navigate without data parameter - page will fetch from sessionStorage
+        router.push(`/exam/${examResponse.exam_attempt_id}?fromStorage=true`)
+      } else {
+        // Data is small enough, use URL parameter
+        router.push(`/exam/${examResponse.exam_attempt_id}?data=${encodedData}`)
+      }
     } catch (err) {
       setError(handleApiError(err))
     } finally {
