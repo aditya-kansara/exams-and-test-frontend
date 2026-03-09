@@ -6,9 +6,12 @@ import { AlertCircle } from 'lucide-react'
 import { ExamStartBatchResponse, BatchAnswerItem, AnswerBatchResponse, ItemPublic } from '@/lib/types'
 import { EXAM_CONFIG } from '@/config/exam'
 import { apiClient, handleApiError } from '@/lib/api'
+import { normalizeThetaToScaledScore } from '@/lib/score'
 import { QuestionCard } from './components/QuestionCard'
 import { ExamHeaderTimer } from './components/ExamHeaderTimer'
+import { UserIdWatermark } from './components/UserIdWatermark'
 import { Button } from '@/components/ui/Button'
+import { useAuth } from '@/contexts/AuthContext'
 import {
   Dialog,
   DialogContent,
@@ -180,6 +183,7 @@ const MAX_VIOLATIONS = 3
 
 export function ExamClient({ attemptId: _attemptId, initialData }: ExamClientProps) {
   const router = useRouter()
+  const { user } = useAuth()
 
   const [examState, dispatch] = useReducer(examReducer, initialExamState)
   const examStateRef = useRef(examState)
@@ -199,6 +203,8 @@ export function ExamClient({ attemptId: _attemptId, initialData }: ExamClientPro
   const [showFullscreenDialog, setShowFullscreenDialog] = useState(false)
   const tabBlurTimeRef = useRef<number | null>(null)
   const isHandlingViolationRef = useRef(false)
+  const fullscreenViolationActiveRef = useRef(false)
+  const tabViolationActiveRef = useRef(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
   const warningTypeRef = useRef<'tab' | 'fullscreen' | null>(null)
   const violationCountRef = useRef(0)
@@ -236,6 +242,8 @@ export function ExamClient({ attemptId: _attemptId, initialData }: ExamClientPro
     setIsTabFocused(true)
     tabBlurTimeRef.current = null
     isHandlingViolationRef.current = false
+    fullscreenViolationActiveRef.current = false
+    tabViolationActiveRef.current = false
     fullscreenEnteredOnceRef.current = false
     
     // Show fullscreen dialog first, then request fullscreen after user confirms
@@ -410,8 +418,15 @@ export function ExamClient({ attemptId: _attemptId, initialData }: ExamClientPro
         // Only trigger violation if:
         // 1. Fullscreen was entered at least once (user successfully entered, then exited)
         // 2. We're not already handling a violation
-        if (fullscreenEnteredOnceRef.current && isHandlingViolationRef.current === false && timer.isRunning) {
+        // 3. This fullscreen-exit incident has not already been counted
+        if (
+          fullscreenEnteredOnceRef.current &&
+          isHandlingViolationRef.current === false &&
+          !fullscreenViolationActiveRef.current &&
+          timer.isRunning
+        ) {
           isHandlingViolationRef.current = true
+          fullscreenViolationActiveRef.current = true
           setViolationCount((prev) => {
             const newCount = prev + 1
             violationCountRef.current = newCount
@@ -437,6 +452,8 @@ export function ExamClient({ attemptId: _attemptId, initialData }: ExamClientPro
         // User is in fullscreen - mark that fullscreen was successfully entered
         fullscreenEnteredOnceRef.current = true
         isHandlingViolationRef.current = false
+        // Unlock fullscreen incident so future exits can be counted once
+        fullscreenViolationActiveRef.current = false
         // Close warning modal if it was a fullscreen violation
         if (warningTypeRef.current === 'fullscreen' && violationCountRef.current < MAX_VIOLATIONS) {
           setShowWarningModal(false)
@@ -481,7 +498,7 @@ export function ExamClient({ attemptId: _attemptId, initialData }: ExamClientPro
 
     const handleTabBlur = () => {
       // Prevent double-counting violations
-      if (isHandlingViolationRef.current) {
+      if (isHandlingViolationRef.current || tabViolationActiveRef.current) {
         return
       }
 
@@ -490,6 +507,7 @@ export function ExamClient({ attemptId: _attemptId, initialData }: ExamClientPro
       // Only trigger if exam is running and not already paused
       if (currentTimer.isRunning && !currentTimer.isPaused) {
         isHandlingViolationRef.current = true
+        tabViolationActiveRef.current = true
         setIsTabFocused(false)
         tabBlurTimeRef.current = Date.now()
         
@@ -525,6 +543,8 @@ export function ExamClient({ attemptId: _attemptId, initialData }: ExamClientPro
         setIsTabFocused(true)
         tabBlurTimeRef.current = null
         isHandlingViolationRef.current = false
+        // Unlock tab incident so future tab switches can be counted once
+        tabViolationActiveRef.current = false
         
         if (violationCountRef.current < MAX_VIOLATIONS) {
           setTimerState((prev) => ({ ...prev, isPaused: false }))
@@ -694,7 +714,7 @@ export function ExamClient({ attemptId: _attemptId, initialData }: ExamClientPro
       setTimerState((prev) => ({ ...prev, isRunning: false }))
 
       const finishData = {
-        score: finishResult.theta_hat?.toString() ?? '0',
+        score: normalizeThetaToScaledScore(finishResult.theta_hat).toString(),
         theta: finishResult.theta_hat?.toString() ?? '0',
         se: finishResult.se_theta?.toString() ?? '1',
         completed: finishResult.completed_at,
@@ -851,6 +871,7 @@ export function ExamClient({ attemptId: _attemptId, initialData }: ExamClientPro
 
   return (
     <div className="min-h-screen bg-gray-50 relative">
+      <UserIdWatermark email={user?.email ?? ''} />
       <div className="sticky top-4 z-40 flex justify-end">
         <ExamHeaderTimer
           timeRemaining={timer.timeRemaining}

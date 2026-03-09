@@ -13,6 +13,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { ExamStateResponse } from '@/lib/types'
 import { EXAM_CONFIG } from '@/config/exam'
 import { PAYMENT_CONFIG } from '@/config/payment'
+import { normalizeThetaToScaledScore } from '@/lib/score'
 
 interface SimpleResultsProps {
   attemptId: string
@@ -266,6 +267,7 @@ export function SimpleResults({ attemptId }: SimpleResultsProps) {
   }
 
   const scorePercentage = results.raw_score ? Math.round((results.raw_score / EXAM_CONFIG.TOTAL_QUESTIONS) * 100) : 0
+  const scaledScore = normalizeThetaToScaledScore(results.theta_hat)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -316,8 +318,9 @@ export function SimpleResults({ attemptId }: SimpleResultsProps) {
           <Card className="w-64">
             <CardHeader className="text-center">
               <CardTitle className="text-4xl font-bold text-[#1c90a6]">
-                {results.theta_hat !== null && results.theta_hat !== undefined ? results.theta_hat.toFixed(2) : 'N/A'}
+                {scaledScore}
               </CardTitle>
+              <CardDescription>Final Score</CardDescription>
             </CardHeader>
           </Card>
         </div>

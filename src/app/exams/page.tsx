@@ -1,11 +1,11 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
-import { LogOut, BookOpen, Calendar, Clock, CheckCircle, AlertCircle } from 'lucide-react'
+import { LogOut, BookOpen, Calendar, AlertCircle } from 'lucide-react'
 import { apiClient, handleApiError } from '@/lib/api'
 import { UserAttemptSummary } from '@/lib/types'
 
@@ -66,27 +66,28 @@ export default function ExamsPage() {
     })
   }
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <CheckCircle className="h-4 w-4 text-green-500" />
-      case 'in_progress':
-        return <Clock className="h-4 w-4 text-yellow-500" />
-      default:
-        return <AlertCircle className="h-4 w-4 text-gray-500" />
+  // Calculate attempt numbers: sort chronologically and assign sequential numbers
+  const { attemptNumberMap, sortedForDisplay } = useMemo(() => {
+    if (attempts.length === 0) {
+      return { attemptNumberMap: new Map<number, number>(), sortedForDisplay: [] }
     }
-  }
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return 'Completed'
-      case 'in_progress':
-        return 'In Progress'
-      default:
-        return 'Unknown'
-    }
-  }
+    // Sort attempts chronologically (oldest first) to determine numbering
+    const sortedAttempts = [...attempts].sort(
+      (a, b) => new Date(a.started_at).getTime() - new Date(b.started_at).getTime()
+    )
+    // Create a map: attempt_id -> attempt number (oldest = 1, newest = highest)
+    const map = new Map<number, number>()
+    sortedAttempts.forEach((attempt, index) => {
+      map.set(attempt.exam_attempt_id, index + 1)
+    })
+    
+    // Sort for display (newest first)
+    const sorted = [...attempts].sort(
+      (a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime()
+    )
+    
+    return { attemptNumberMap: map, sortedForDisplay: sorted }
+  }, [attempts])
 
 
   if (isLoading) {
@@ -202,51 +203,43 @@ export default function ExamsPage() {
                 </button>
               </div>
             ) : (
-              attempts.map((attempt) => (
-                <div
-                  key={attempt.exam_attempt_id}
-                  className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 border border-gray-200"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-4 mb-3">
-                        <div className="flex items-center gap-2 text-sm text-gray-600">
-                          <Calendar className="h-4 w-4" />
-                          {formatDate(attempt.started_at)}
-                        </div>
-                        {attempt.status !== 'completed' && (
-                          <div className="flex items-center gap-2 text-sm text-gray-600">
-                            {getStatusIcon(attempt.status)}
-                            {getStatusText(attempt.status)}
+              sortedForDisplay.map((attempt) => {
+                const attemptNumber = attemptNumberMap.get(attempt.exam_attempt_id)
+                // This should never happen, but provide fallback
+                if (attemptNumber === undefined) {
+                  console.error('Attempt number missing for ID:', attempt.exam_attempt_id)
+                  return null
+                }
+                return (
+                      <div
+                        key={attempt.exam_attempt_id}
+                        className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow p-6 border border-gray-200"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-4 mb-3">
+                              <div className="flex items-center gap-2 text-sm text-gray-600">
+                                <Calendar className="h-4 w-4" />
+                                {formatDate(attempt.started_at)}
+                              </div>
+                            </div>
+                            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                              Test Attempt {attemptNumber}
+                            </h3>
+                            {/* Removed per request: questions/total items/score/ability row */}
                           </div>
-                        )}
+                          <div className="flex items-center gap-3">
+                            <button
+                              onClick={() => router.push(`/report/${attempt.exam_attempt_id}`)}
+                              className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-[#1c90a6] hover:bg-[#0d7a8a] border border-transparent rounded-md transition-colors"
+                            >
+                              Report
+                            </button>
+                          </div>
+                        </div>
                       </div>
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                        Test Attempt #{attempt.exam_attempt_id}
-                      </h3>
-                      {/* Removed per request: questions/total items/score/ability row */}
-                    </div>
-                    <div className="flex items-center gap-3">
-                      {/* Report / Continue buttons only (icons removed) */}
-                      {attempt.status === 'completed' ? (
-                        <button
-                          onClick={() => router.push(`/report/${attempt.exam_attempt_id}`)}
-                          className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-[#1c90a6] hover:bg-[#0d7a8a] border border-transparent rounded-md transition-colors"
-                        >
-                          Report
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => router.push(`/exam/${attempt.exam_attempt_id}`)}
-                          className="inline-flex items-center px-4 py-2 text-sm font-medium text-[#1c90a6] bg-[#1c90a6]/10 border border-[#1c90a6]/20 rounded-md hover:bg-[#1c90a6]/20 transition-colors"
-                        >
-                          Continue Exam
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))
+                    )
+                  })
             )}
           </div>
         </div>

@@ -7,6 +7,7 @@ import { CreditCard, CheckCircle, AlertCircle, Eye, EyeOff } from 'lucide-react'
 import { apiClient, handleApiError } from '@/lib/api'
 import { PAYMENT_CONFIG } from '@/config/payment'
 import { QuestionDetail } from '@/lib/types'
+import { normalizeThetaToScaledScore } from '@/lib/score'
 
 interface ReportData {
   exam_attempt_id: number
@@ -35,16 +36,6 @@ export default function ReportPage() {
   const [securityKey, setSecurityKey] = useState<string | null>(null)
   
   const attemptId = params.attemptId as string
-
-  // Normalize theta to 0-500 scale (clamped to [-3, 3])
-  const getNormalizedThetaScore = (theta: number | null | undefined) => {
-    const MIN_THETA = -3
-    const MAX_THETA = 3
-    if (typeof theta !== 'number' || !isFinite(theta)) return 0
-    const clamped = Math.max(MIN_THETA, Math.min(MAX_THETA, theta))
-    const normalized = ((clamped - MIN_THETA) / (MAX_THETA - MIN_THETA)) * 500
-    return Math.round(normalized)
-  }
 
   useEffect(() => {
     // Surface payment failure state if redirected with query param
@@ -381,6 +372,7 @@ export default function ReportPage() {
         prefill: {
           name: user?.user_metadata?.full_name || user?.email?.split('@')[0] || '',
           email: user?.email || '',
+          contact: '', // Explicitly clear contact to prevent showing cached phone numbers
         },
         theme: {
           color: '#1c90a6'
@@ -670,7 +662,7 @@ export default function ReportPage() {
         <div className="bg-white rounded-lg shadow-md p-6 mb-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-4">Exam Summary</h2>
           <div className="text-center">
-            <div className="text-4xl font-bold text-[#1c90a6] mb-2">Score: {getNormalizedThetaScore(reportData.theta_hat)}</div>
+            <div className="text-4xl font-bold text-[#1c90a6] mb-2">Score: {normalizeThetaToScaledScore(reportData.theta_hat)}</div>
             <div className="text-sm text-gray-600">
               {isUnlocked && reportData.questions.length > 0 
                 ? `${reportData.questions.length} questions answered`
