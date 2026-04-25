@@ -50,7 +50,7 @@ export function ReportClient({ attemptId, results }: ReportClientProps) {
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `exam-report-${attemptId}.pdf`
+      a.download = `Exam-Report.pdf`
       document.body.appendChild(a)
       a.click()
       window.URL.revokeObjectURL(url)
