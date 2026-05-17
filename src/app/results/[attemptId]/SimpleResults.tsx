@@ -195,7 +195,7 @@ export function SimpleResults({ attemptId }: SimpleResultsProps) {
         razorpay.open()
         // Fallback polling to confirm unlock if handler not invoked
         try {
-          const maxTries = 24
+          const maxTries = 60
           let tries = 0
           const interval = setInterval(async () => {
             tries += 1

@@ -8,6 +8,7 @@ import { apiClient, handleApiError } from '@/lib/api'
 import { PAYMENT_CONFIG } from '@/config/payment'
 import { QuestionDetail } from '@/lib/types'
 import { normalizeThetaToScaledScore } from '@/lib/score'
+import { ReportQuestionDetail } from '@/components/report/ReportQuestionDetail'
 
 interface ReportData {
   exam_attempt_id: number
@@ -36,6 +37,8 @@ export default function ReportPage() {
   const [securityKey, setSecurityKey] = useState<string | null>(null)
   
   const attemptId = params.attemptId as string
+  const attemptNumParam = searchParams?.get('attemptNum')
+  const attemptNum = attemptNumParam ? parseInt(attemptNumParam, 10) : null
 
   useEffect(() => {
     // Surface payment failure state if redirected with query param
@@ -617,9 +620,9 @@ export default function ReportPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-4">
-              <h1 className="text-lg font-semibold text-gray-900">
-                Exam Report #{reportData.exam_attempt_id}
-              </h1>
+            <h1 className="text-lg font-semibold text-gray-900">
+            {(attemptNum )  ? `Test Attempt ${attemptNum} Report`  : 'Exam Report'}
+            </h1>
             </div>
 
             <div className="flex items-center gap-3">
@@ -750,66 +753,7 @@ export default function ReportPage() {
             ) : (
               reportData.questions.length > 0 ? (
                 reportData.questions.map((question) => (
-                  <div
-                    key={question.id}
-                    className="border rounded-lg p-6 relative border-gray-200"
-                  >
-                    <div className="unlocked-content" data-question-content="true">
-                      <div className="flex items-start justify-between mb-4">
-                        <h3 className="text-lg font-semibold text-gray-900">
-                          Question {question.position}
-                        </h3>
-                        <div className="flex items-center gap-2">
-                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                            question.is_correct 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-red-100 text-red-800'
-                          }`}>
-                            {question.is_correct ? 'Correct' : 'Incorrect'}
-                          </span>
-                          <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
-                            {question.category}
-                          </span>
-                        </div>
-                      </div>
-
-                      <p className="text-gray-700 mb-4">{question.question_text}</p>
-
-                      <div className="space-y-2 mb-4">
-                        {[
-                          { key: 'A', text: question.option_a_text, value: 1 },
-                          { key: 'B', text: question.option_b_text, value: 2 },
-                          { key: 'C', text: question.option_c_text, value: 3 },
-                          { key: 'D', text: question.option_d_text, value: 4 },
-                          { key: 'E', text: question.option_e_text, value: 5 }
-                        ].map((option) => (
-                          <div
-                            key={option.key}
-                            className={`p-3 rounded-lg border ${
-                              option.value === question.correct_option
-                                ? 'border-green-500 bg-green-50'
-                                : option.value === question.selected_option
-                                ? 'border-red-500 bg-red-50'
-                                : 'border-gray-200 bg-gray-50'
-                            }`}
-                          >
-                            <div className="flex items-center gap-3">
-                              <span className="font-medium text-gray-700">{option.key}.</span>
-                              <span className="text-gray-700">{option.text}</span>
-                              {option.value === question.correct_option && (
-                                <CheckCircle className="h-4 w-4 text-green-500 ml-auto" />
-                              )}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-
-                      <div className="mt-4 p-4 bg-gray-50 rounded-lg">
-                        <h4 className="font-medium text-gray-900 mb-2">Explanation:</h4>
-                        <p className="text-gray-700 text-sm">{question.explanation}</p>
-                      </div>
-                    </div>
-                  </div>
+                  <ReportQuestionDetail key={question.id} question={question} />
                 ))
               ) : (
                 <div className="text-center py-12">

@@ -685,31 +685,56 @@ section {
   animation-delay: 0.3s;
 }
 
-/* === Final split section (HR-style) === */
+/* === Final split section (FAQ & Reviews) — starry sky background === */
 .final-split {
   position: relative;
   min-height: 80svh;
   display: grid;
   place-items: center;
   padding: 5rem 1rem;
-  color: #e5e7eb;             /* slate-200 text on dark */
-  background:
-    radial-gradient(1000px 600px at 50% 0%, #0b1220 0%, #0b1220 60%, #0a101b 100%),
-    #0b1220;                  /* deep navy */
+  color: #e5e7eb;
+  background-color: #0b1220;
+  background-image: url('/bg3.jpg');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   overflow: hidden;
 }
 
-/* starfield sprinkle (super light) */
+/* Fade in from AMC section + keep FAQ/review text readable */
 .final-split::before {
   content: "";
-  position: absolute; inset: 0;
-  background-image:
-    radial-gradient(1px 1px at 10% 20%, rgba(255,255,255,.12) 99%, transparent 100%),
-    radial-gradient(1px 1px at 80% 30%, rgba(255,255,255,.10) 99%, transparent 100%),
-    radial-gradient(1px 1px at 40% 70%, rgba(255,255,255,.08) 99%, transparent 100%),
-    radial-gradient(1px 1px at 65% 55%, rgba(255,255,255,.10) 99%, transparent 100%);
-  opacity: .25;
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(11, 18, 32, 0.97) 0%,
+    rgba(11, 18, 32, 0.82) 10%,
+    rgba(11, 18, 32, 0.55) 22%,
+    rgba(11, 18, 32, 0.38) 45%,
+    rgba(11, 18, 32, 0.52) 100%
+  );
   pointer-events: none;
+}
+
+/* Soft handoff from AMC (light building) into FAQ starfield */
+#amc::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: min(32vh, 280px);
+  z-index: 5;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    transparent 0%,
+    rgba(11, 18, 32, 0.15) 25%,
+    rgba(11, 18, 32, 0.45) 55%,
+    rgba(11, 18, 32, 0.88) 85%,
+    rgba(11, 18, 32, 1) 100%
+  );
 }
 
 /* content grid */
@@ -724,28 +749,14 @@ section {
 }
 @media (min-width: 1024px) {
   .final-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 4rem;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2.5rem;
   }
 }
 
-/* subtle vertical divider between panes on desktop */
+/* Dividers hidden for 3-column layout */
 .final-divider {
   display: none;
-}
-@media (min-width: 1024px) {
-  .final-divider {
-    display: block;
-    position: absolute;
-    left: 50%; top: 0; bottom: 0;
-    width: 1px;
-    background: linear-gradient(
-      to bottom,
-      transparent,
-      rgba(148,163,184,.25),
-      transparent
-    );
-  }
 }
 
 /* pane styles */
@@ -877,8 +888,16 @@ section {
   /* subtle pop without turning whitish */
   filter: brightness(1.06) contrast(1.02) saturate(1.02);
 }
-/* make stars a touch clearer on hover (still subtle) */
-.final-split:hover::before { opacity: .32; }
+.final-split:hover::before {
+  background: linear-gradient(
+    180deg,
+    rgba(11, 18, 32, 0.92) 0%,
+    rgba(11, 18, 32, 0.75) 10%,
+    rgba(11, 18, 32, 0.48) 22%,
+    rgba(11, 18, 32, 0.32) 45%,
+    rgba(11, 18, 32, 0.45) 100%
+  );
+}
 
 /* kill any "card" look in final panes (only text panes) */
 .final-pane {

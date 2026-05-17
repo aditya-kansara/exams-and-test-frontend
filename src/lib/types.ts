@@ -10,6 +10,11 @@ export const EXAM_DURATION_SECONDS = EXAM_DURATION_HOURS * 60 * 60 // 3.5 hours 
 // Exam Types - Updated to match backend schemas
 export const ExamStartRequestSchema = z.object({})
 
+export const ItemMediaSchema = z.object({
+  storage_key: z.string(),
+  display_order: z.string(),
+})
+
 export const ItemPublicSchema = z.object({
   id: z.number(),
   question_text: z.string(),
@@ -27,14 +32,7 @@ export const ItemPublicSchema = z.object({
   b: z.number().optional(),
   c: z.number().optional(),
   position: z.number().optional(),
-  media: z
-    .array(
-      z.object({
-        storage_key: z.string(),
-        display_order: z.number(),
-      })
-    )
-    .optional(),
+  media: z.array(ItemMediaSchema).optional(),
 })
 
 export const ExamStartResponseSchema = z.object({
@@ -202,6 +200,7 @@ export const QuestionDetailSchema = z.object({
   explanation: z.string(),
   category: z.string(),
   answered_at: z.string(),
+  media: z.array(ItemMediaSchema).default([]),
 })
 
 export const ExamQuestionsResponseSchema = z.object({

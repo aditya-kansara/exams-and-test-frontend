@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState, Suspense } from 'react'
 import Image from 'next/image'
 import { useAuth } from '@/contexts/AuthContext'
+import { supabaseConfig } from '@/config/supabase'
 
 function LoginContent() {
   const router = useRouter()
@@ -24,18 +25,10 @@ function LoginContent() {
     }
   }, [isAuthenticated, isLoading, router, search])
 
-  const onGoogle = async () => {
-    try {
-      setErr(null)
-      setSubmitting(true)
-      await signInWithGoogle()
-      // The redirect will be handled by Supabase OAuth flow
-    } catch (e: any) {
-      setErr(e?.message ?? 'Could not sign in with Google')
-    } finally {
-      setSubmitting(false)
-    }
-  }
+ const onGoogle = () => {
+  window.location.href =
+  `${supabaseConfig.url}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(window.location.origin + '/auth/callback')}`
+}
 
   const onPasswordLogin = async (e: React.FormEvent) => {
     e.preventDefault()

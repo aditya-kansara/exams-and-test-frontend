@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { Mail } from 'lucide-react'
+import { CONTACT_EMAIL } from '@/data/landingContent'
 
 export default function ContactPage() {
   return (
@@ -60,10 +61,10 @@ export default function ContactPage() {
               <div>
                 <p className="text-sm font-medium text-gray-500 mb-1">Email us</p>
                 <a 
-                  href="mailto:examsandtestfounder@gmail.com" 
+                  href={`mailto:${CONTACT_EMAIL}`}
                   className="text-lg font-semibold text-[#1c90a6] hover:text-[#0d7a8a] hover:underline transition-colors"
                 >
-                  examsandtestfounder@gmail.com
+                  {CONTACT_EMAIL}
                 </a>
               </div>
             </div>

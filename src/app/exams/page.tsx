@@ -230,7 +230,7 @@ export default function ExamsPage() {
                           </div>
                           <div className="flex items-center gap-3">
                             <button
-                              onClick={() => router.push(`/report/${attempt.exam_attempt_id}`)}
+                              onClick={() => router.push(`/report/${attempt.exam_attempt_id}?attemptNum=${attemptNumber}`)}
                               className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-[#1c90a6] hover:bg-[#0d7a8a] border border-transparent rounded-md transition-colors"
                             >
                               Report

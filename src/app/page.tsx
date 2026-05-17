@@ -6,6 +6,10 @@ import { useEffect, useRef, useState } from 'react'
 import { Building2, Mail, User } from 'lucide-react'
 import clsx from 'clsx'
 import { AuthModal } from '@/components/auth/AuthModal'
+import { LandingFaq } from '@/components/landing/LandingFaq'
+import { LandingReviews } from '@/components/landing/LandingReviews'
+import { LandingConnect } from '@/components/landing/LandingConnect'
+import { CONTACT_EMAIL } from '@/data/landingContent'
 import { useAuth } from '@/contexts/AuthContext'
 import Image from 'next/image'
 
@@ -284,51 +288,12 @@ export default function ExamsAndTestLanding() {
       </section>
 
 
-      {/* FINAL SECTION — split panel design */}
+      {/* FINAL SECTION — FAQ, Reviews & Connect */}
       <section id="get-started" className="final-split snap-child pt-8">
-        {/* subtle divider only on lg+ */}
-        <span className="final-divider" aria-hidden="true" />
-
         <div className="final-grid">
-          {/* Left pane */}
-          <div className="final-pane">
-            <h3>For Learners</h3>
-            <p>
-              Join adaptive practice with realistic timing and reports. Track progress by
-              system and competency—and focus on what actually moves your score.
-            </p>
-            <div className="mt-6">
-              {isAuthenticated ? (
-                <Link href="/exam" className="btn-dark inline-flex items-center gap-2">
-                  Start Test
-                </Link>
-              ) : (
-                <Link
-                  href="/signup"
-                  className="btn-dark inline-flex items-center gap-2"
-                >
-                  Create a free account
-                </Link>
-              )}
-            </div>
-          </div>
-
-          {/* Right pane */}
-          <div className="final-pane">
-            <h3>For Institutes</h3>
-            <p>
-              Cohort dashboards, custom item banks, and institute-wide analytics.
-              Pilot with your syllabus and integrations—we'll help you get live fast.
-            </p>
-            <div className="mt-6">
-              <Link
-                href="/contact"
-                className="btn-dark inline-flex items-center gap-2"
-              >
-                Contact us
-              </Link>
-            </div>
-          </div>
+          <LandingFaq />
+          <LandingReviews />
+          <LandingConnect />
         </div>
       </section>
 
@@ -383,7 +348,7 @@ export default function ExamsAndTestLanding() {
                 </div>
                 <div>
                   <p className="text-sm text-slate-500">Send us your resume</p>
-                  <a href="mailto:examsandtestfounder@gmail.com" className="font-medium hover:text-[#1c90a6] transition-colors">examsandtestfounder@gmail.com</a>
+                  <a href={`mailto:${CONTACT_EMAIL}`} className="font-medium hover:text-[#1c90a6] transition-colors">{CONTACT_EMAIL}</a>
                 </div>
               </div>
             </div>
